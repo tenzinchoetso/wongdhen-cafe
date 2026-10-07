@@ -38,7 +38,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; scroll-padding-top: var(--header-h); }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: var(--header-h); background: var(--night); } /* dark behind everything: no white flash between pages */
 body {
   margin: 0;
   background: var(--paper);
@@ -254,7 +254,6 @@ ul { margin: 0; padding: 0; list-style: none; }
 
 /* ---------- full-bleed band ---------- */
 .band { position: relative; min-height: 88vh; min-height: 88svh; display: flex; align-items: center; color: var(--cream); overflow: hidden; background: var(--night); }
-.motion .band { will-change: transform; } /* grows to full width as it arrives (motion.js) */
 .band__media { position: absolute; inset: -8% 0; }
 .band__media img { width: 100%; height: 100%; object-fit: cover; }
 .band::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(14, 10, 7, .86) 0%, rgba(14, 10, 7, .55) 45%, rgba(14, 10, 7, .15) 100%); }
@@ -429,7 +428,7 @@ fieldset.field { border: 0; margin: 0; padding: 0; min-width: 0; }
 .form__hint { grid-column: 1 / -1; font-size: 14px; color: var(--muted); margin: 0; }
 
 /* ---------- footer ---------- */
-.site-footer { background: var(--night); color: var(--cream); padding: clamp(72px, 9vw, 120px) 0 calc(36px + env(safe-area-inset-bottom)); }
+.site-footer { overflow: hidden; background: var(--night); color: var(--cream); padding: clamp(72px, 9vw, 120px) 0 calc(36px + env(safe-area-inset-bottom)); }
 .footer-cta { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 28px; padding-bottom: clamp(48px, 6vw, 80px); }
 .footer-cta .h2 { max-width: 14ch; }
 .footer-top { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 36px; padding-bottom: 56px; }
@@ -513,6 +512,10 @@ fieldset.field { border: 0; margin: 0; padding: 0; min-width: 0; }
 .is-intro:not(.intro-done) :is(.hero, .page-hero) .is-split .w__i { transform: translateY(112%) rotate(4deg); }
 .is-intro:not(.intro-done) :is(.hero__media, .page-hero__media) img { animation-play-state: paused; }
 
+/* revealed photos are zoomed (scale) inside their frame: keep that inside the frame,
+   or it widens the page on phones (clip-path alone doesn't stop the overflow) */
+[data-media] { overflow: hidden; }
+
 /* ---------- split text: words (or letters) rise out of a mask ---------- */
 .w { display: inline-block; overflow: hidden; vertical-align: top; padding: .12em .06em .22em; margin: -.12em -.06em -.22em; }
 .w__i { display: inline-block; }
@@ -585,11 +588,10 @@ fieldset.field { border: 0; margin: 0; padding: 0; min-width: 0; }
 /* ---------- scroll progress ---------- */
 .progress { position: fixed; left: 0; right: 0; top: 0; z-index: 160; height: 2px; transform: scaleX(0); transform-origin: 0 50%; background: linear-gradient(90deg, var(--copper), var(--brass)); pointer-events: none; }
 
-/* ---------- header slides away on the way down, back on the way up ---------- */
-.site-header[data-hidden="true"] { transform: translateY(-100%); }
-
 /* ---------- footer wordmark ---------- */
-.footer-mark { display: flex; justify-content: center; margin-top: clamp(40px, 6vw, 72px); font: 400 clamp(4.4rem, 20.5vw, 21rem)/.82 var(--serif); letter-spacing: -.045em; white-space: nowrap; user-select: none; -webkit-user-select: none; }
+/* "Wongdhen" is ~4.9 × its font size wide: size it to the space inside the gutters so it always fits */
+.footer-mark { display: flex; justify-content: center; margin-top: clamp(40px, 6vw, 72px); font: 400 calc((min(100vw, var(--max)) - 2 * var(--gutter)) / 4.8)/.82 var(--serif); letter-spacing: -.045em; white-space: nowrap; user-select: none; -webkit-user-select: none; }
+.footer-mark .w { flex: none; } /* never squeeze (and clip) the word */
 .footer-mark .w__i, .footer-mark:not(.is-split) { background: linear-gradient(180deg, rgba(201, 164, 108, .5), rgba(201, 164, 108, .04) 88%); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
 /* ---------- mobile menu: links arrive one by one ---------- */
@@ -597,17 +599,6 @@ fieldset.field { border: 0; margin: 0; padding: 0; min-width: 0; }
   .menu-open .mnav__links li { animation: mnav-in .8s var(--ease-expo) both; animation-delay: calc(var(--i, 0) * 70ms + 120ms); }
 }
 @keyframes mnav-in { from { opacity: 0; transform: translateY(40px); } }
-
-/* ---------- page transitions (browsers with cross-document View Transitions) ---------- */
-@media (prefers-reduced-motion: no-preference) {
-  @view-transition { navigation: auto; }
-}
-.site-header { view-transition-name: site-header; }
-.dock { view-transition-name: dock; }
-::view-transition-old(root) { animation: vt-out .55s var(--ease-io) both; }
-::view-transition-new(root) { animation: vt-in .85s var(--ease-io) both; }
-@keyframes vt-out { to { opacity: .35; transform: translateY(-5vh) scale(.97); } }
-@keyframes vt-in { from { clip-path: inset(100% 0 0 0); } }
 
 /* ---------- film grain, very light (mouse devices) ---------- */
 @media (pointer: fine) {
@@ -654,7 +645,6 @@ html.lenis, html.lenis body { height: auto; }
   .loader__sub { letter-spacing: .2em; gap: 10px; }
   .loader__sub::before, .loader__sub::after { width: 18px; }
   .brand { gap: 10px; }
-  .hero__media img { object-position: 6% 10%; }
   .hero__inner { padding-bottom: 92px; }
   .hero__foot .btn-row { width: 100%; }
   .hero__foot .btn { flex: 1 1 auto; justify-content: center; }
@@ -669,6 +659,12 @@ html.lenis, html.lenis body { height: auto; }
   .site-footer { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   .split__media--duo { grid-template-columns: 1fr 1fr; }
   .chips { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
+}
+/* tall, narrow screens (phones): the whole brass sign across the top, fading into the night where the text sits */
+@media (max-aspect-ratio: 7/10) {
+  .hero__media { bottom: auto; height: calc(100vw * 1156 / 900); max-height: 100%; }
+  .hero__media img { object-position: 50% 50%; }
+  .hero__media::after { background: linear-gradient(180deg, rgba(14, 10, 7, .5) 0%, rgba(14, 10, 7, .08) 20%, rgba(14, 10, 7, .1) 48%, rgba(21, 17, 14, .82) 80%, var(--night) 100%); }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
