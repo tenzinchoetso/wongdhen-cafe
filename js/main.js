@@ -254,6 +254,9 @@
         }).join("") + "</div>";
     }).join("");
 
+    var bar = $(".menu-bar");
+    var setBarH = function () { if (bar) document.documentElement.style.setProperty("--menubar-h", bar.offsetHeight + "px"); };
+    setBarH(); window.addEventListener("resize", setBarH);
     var current = MENU[0].id;
     var renderChips = function () {
       var sec = MENU.filter(function (s) { return s.id === current; })[0];
@@ -266,7 +269,7 @@
       $$(".tab", tabsEl).forEach(function (t) { t.setAttribute("aria-selected", t.getAttribute("data-tab") === id ? "true" : "false"); });
       $$(".menu-panel", menuRoot).forEach(function (p) { p.hidden = p.id !== "panel-" + id; });
       renderChips();
-      if (scroll) window.scrollTo({ top: menuRoot.getBoundingClientRect().top + window.scrollY - 170, behavior: reduce ? "auto" : "smooth" });
+      if (scroll) { var first = $("#panel-" + id + " [data-group]", menuRoot); if (first) first.scrollIntoView({ behavior: reduce ? "auto" : "smooth" }); }
     };
     tabsEl.innerHTML = MENU.map(function (s, i) {
       return '<button class="tab" role="tab" id="tab-' + s.id + '" data-tab="' + s.id + '" aria-controls="panel-' + s.id + '" aria-selected="' + (i ? "false" : "true") + '">' + esc(s.label) + "</button>";
@@ -293,9 +296,10 @@
       if (sec) {
         selectTab(sec.id, false);
         setTimeout(function () {
-          var t = document.getElementById(sec.id === hash ? "panel-" + hash : hash);
-          if (t) window.scrollTo({ top: t.getBoundingClientRect().top + window.scrollY - (sec.id === hash ? 170 : 150), behavior: "auto" });
-        }, 60);
+          setBarH();
+          var t = sec.id === hash ? $("#panel-" + hash + " [data-group]", menuRoot) : document.getElementById(hash);
+          if (t) t.scrollIntoView({ behavior: "auto" });
+        }, 80);
       }
     }
   }
