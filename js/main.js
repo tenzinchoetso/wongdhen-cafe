@@ -13,6 +13,8 @@
   var HOURS = window.WONGDHEN_HOURS || { days: [] };
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var DEFAULT_WA = "Hello Wongdhen Cafe! I'd like to book a table.";
+  // safety net for the loading screen: never keep the page waiting
+  if (document.documentElement.classList.contains("is-intro")) setTimeout(function () { document.documentElement.classList.add("intro-done"); }, 9000);
 
   /* ---------- helpers ---------- */
   function waLink(text) {
@@ -214,8 +216,8 @@
     var diet = ""; // Veg / Non-veg filter: "", "veg" or "nonveg"
     var DIET = { veg: { only: "Veg only", word: "veg", mark: "Vegetarian" }, nonveg: { only: "Non-veg only", word: "non-veg", mark: "Non-vegetarian" } };
     var optDiet = function (o) { // an option's kind from its name: "Chicken" → nonveg, "Mixed Veg" → veg, "8 pc" → ""
-      if (/\b(non-veg|chicken|buff|pork|prawns?|lamb|fish|salmon|tuna|seafood|crab|duck|ham|bacon|eggs?)\b/i.test(o)) return "nonveg";
-      if (/\b(veg|vegetables?|tofu|paneer|cottage cheese|edamame|corn)\b/i.test(o)) return "veg";
+      if (/\b(non-veg|chicken|buff|pork|prawns?|lamb|fish|salmon|tuna|seafood|crab|duck|ham|bacon)\b/i.test(o)) return "nonveg";
+      if (/\b(veg|vegetables?|tofu|paneer|cottage cheese|edamame|corn|eggs?)\b/i.test(o)) return "veg"; // egg counts as veg
       return "";
     };
     var dishDiet = function (it) { // "veg", "nonveg", "both" (options of each kind) or "" (not marked)
@@ -250,7 +252,7 @@
       var f = DIET[diet];
       var text = sec.unfiltered ? esc(sec.label) + " aren't filtered, so everything is shown." :
         empty ? "Nothing in " + esc(sec.label) + " is marked " + f.word + "." :
-        "Dishes that come both ways show their " + f.word + " options. Dishes we haven't marked, like egg dishes and most cakes, are hidden.";
+        "Dishes that come both ways show their " + f.word + " options. Dishes we haven't marked, like pancakes and most cakes, are hidden.";
       return '<div class="menu-filter"><p>' + mark(diet) + "<b>" + f.only + ".</b> " + text + '</p><button type="button" data-diet-clear>Show the full menu</button></div>';
     };
     var renderMenu = function () {

@@ -34,6 +34,7 @@
   --ease: cubic-bezier(.2, .7, .2, 1);
   --ease-expo: cubic-bezier(.16, 1, .3, 1);
   --ease-io: cubic-bezier(.76, 0, .24, 1);
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -207,7 +208,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 /* ---------- inner page hero ---------- */
 .page-hero { position: relative; min-height: 78vh; min-height: 78svh; display: flex; align-items: flex-end; color: var(--cream); overflow: hidden; background: var(--night); }
 .page-hero__media { position: absolute; inset: 0; }
-.page-hero__media img { width: 100%; height: 100%; object-fit: cover; }
+.page-hero__media img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.06); animation: settle 2.4s var(--ease) .1s forwards; }
 .page-hero__media::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(14, 10, 7, .62), rgba(14, 10, 7, .1) 65%), linear-gradient(180deg, rgba(14, 10, 7, .4), rgba(14, 10, 7, .12) 35%, rgba(14, 10, 7, .88)); }
 .page-hero__text { position: relative; padding-bottom: clamp(40px, 7vh, 84px); padding-top: calc(var(--header-h) + 40px); }
 .page-hero__text p { max-width: 46ch; color: rgba(244, 235, 223, .85); margin-top: 22px; }
@@ -454,7 +455,6 @@ fieldset.field { border: 0; margin: 0; padding: 0; min-width: 0; }
 /* ---------- reveal ---------- */
 .js [data-reveal] { opacity: 0; transform: translateY(26px); transition: opacity .9s var(--ease) var(--d, 0s), transform .9s var(--ease) var(--d, 0s); }
 .js [data-reveal].is-in { opacity: 1; transform: none; }
-.is-intro .hero [data-reveal] { transition-delay: calc(var(--d, 0s) + 1.3s); }
 
 /* ==========================================================================
    Motion (js/motion.js). Every hidden starting state lives inside
@@ -462,22 +462,56 @@ fieldset.field { border: 0; margin: 0; padding: 0; min-width: 0; }
    never runs (html never gets .motion), everything shows after 2.5 s.
    ========================================================================== */
 
-/* ---------- intro: the seal draws in, then the curtain lifts (home, once per visit) ---------- */
+/* ---------- loading screen: the first page of every visit ----------
+   The seal draws itself line by line, fills in, the name rises, a counter
+   follows the page load, then two curtains lift (copper, then night).
+   html.is-intro is set in <head>; the inline script after .loader runs it
+   and adds html.intro-done as the curtains go up. */
 .loader { display: none; }
-.is-intro .loader {
-  position: fixed; inset: 0; z-index: 300; display: grid; place-items: center; align-content: center; gap: 22px;
-  background: var(--logo); color: var(--logo-ink);
-  animation: loader-out 1s var(--ease-io) 1.15s forwards;
+.is-intro .loader { position: fixed; inset: 0; z-index: 300; display: block; animation: ld-failsafe 0s 9.5s forwards; }
+@keyframes ld-failsafe { to { visibility: hidden; } }
+.loader--out { pointer-events: none; }
+.loader__back { position: absolute; inset: 0; background: var(--night); }
+.loader__panel {
+  position: absolute; inset: 0; display: grid; place-items: center; overflow: hidden; color: var(--logo-ink);
+  background: radial-gradient(120% 85% at 50% 42%, #A9592C 0%, var(--logo) 46%, #6A3111 100%);
 }
-.loader .logo { width: clamp(120px, 20vw, 170px); height: auto; aspect-ratio: 1; }
-.loader .logo circle { fill: rgba(0, 0, 0, .08); }
-.loader .logo__ring { animation: loader-ring 1.3s var(--ease-expo) both; }
-.loader .logo__w { animation: loader-w 1s var(--ease-expo) .3s both; }
-.loader__name { margin: 0; font: 600 11px/1 var(--sans); letter-spacing: .5em; text-transform: uppercase; opacity: .85; animation: loader-w 1s var(--ease-expo) .45s both; }
-@keyframes loader-ring { from { transform: rotate(-140deg) scale(.55); opacity: 0; } }
-@keyframes loader-w { from { transform: translateY(26px); opacity: 0; } }
-@keyframes loader-out { to { clip-path: inset(0 0 100% 0); visibility: hidden; } }
-.is-intro .hero__media img { animation-delay: 1.2s; }
+.loader__panel::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .09; background-image: var(--grain); }
+.loader__stage { position: relative; z-index: 1; display: grid; justify-items: center; gap: 22px; text-align: center; padding: 0 var(--gutter); }
+.loader__seal { width: clamp(176px, 22vw, 260px); height: auto; aspect-ratio: 1; overflow: visible; }
+.loader__orbit { fill: none; stroke: rgba(252, 240, 226, .38); stroke-width: 1; stroke-dasharray: 1; stroke-dashoffset: 1; animation: ld-draw 2.2s var(--ease-io) .05s forwards; }
+.loader__lines path { fill: none; stroke: var(--logo-ink); stroke-width: 1.2; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: ld-draw 1.5s var(--ease-io) forwards; }
+.loader__lines { animation: ld-out .7s ease 1.9s forwards; }
+.loader__fill { fill: var(--logo-ink); animation: ld-in .8s ease 1.55s both; }
+.loader__w { fill: var(--logo-ink); transform-origin: 150px 150px; animation: ld-w 1.1s var(--ease-expo) 1.65s both; }
+.loader__name { display: flex; overflow: hidden; margin: 6px -.34em 0 0; padding: .12em 0 .08em; font: 400 clamp(1.5rem, 3.2vw, 2.2rem)/1 var(--serif); letter-spacing: .34em; text-transform: uppercase; }
+.loader__name span { display: inline-block; animation: ld-rise 1.1s var(--ease-expo) both; animation-delay: calc(.85s + var(--i) * 75ms); }
+.loader__sub { display: flex; align-items: center; gap: 14px; margin: 0; white-space: nowrap; font: 600 10.5px/1.4 var(--sans); letter-spacing: .3em; text-transform: uppercase; color: rgba(252, 240, 226, .82); animation: ld-in 1s ease 1.55s both; }
+.loader__sub::before, .loader__sub::after { content: ""; width: 34px; height: 1px; flex: none; background: currentColor; opacity: .6; animation: ld-line 1.1s var(--ease-expo) 1.75s both; }
+.loader__sub::before { transform-origin: right; }
+.loader__sub::after { transform-origin: left; }
+.loader__foot { position: absolute; z-index: 1; left: var(--gutter); right: var(--gutter); bottom: max(26px, env(safe-area-inset-bottom)); display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; font: 600 10.5px/1.2 var(--sans); letter-spacing: .26em; text-transform: uppercase; color: rgba(252, 240, 226, .72); animation: ld-in .8s ease .25s both; }
+.loader__count { font: italic 400 clamp(2.4rem, 5vw, 3.6rem)/.9 var(--serif); letter-spacing: 0; text-transform: none; color: var(--logo-ink); font-variant-numeric: tabular-nums; }
+.loader__count small { font: 600 11px/1 var(--sans); font-style: normal; letter-spacing: .1em; margin-left: 4px; vertical-align: top; opacity: .7; }
+.loader__bar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; height: 2px; background: rgba(252, 240, 226, .85); transform: scaleX(0); transform-origin: 0 50%; }
+@keyframes ld-draw { to { stroke-dashoffset: 0; } }
+@keyframes ld-in { from { opacity: 0; } }
+@keyframes ld-out { to { opacity: 0; } }
+@keyframes ld-w { from { opacity: 0; transform: translateY(24px) scale(.9); } }
+@keyframes ld-rise { from { transform: translateY(120%); } }
+@keyframes ld-line { from { transform: scaleX(0); } }
+/* exit: the seal floats up and fades, then the copper and night curtains lift with a curved edge */
+.loader--out .loader__stage { animation: ld-stage-out .8s var(--ease-io) forwards; }
+.loader--out .loader__foot { animation: ld-out .45s ease forwards; }
+.loader--out .loader__panel { animation: ld-lift 1.2s var(--ease-io) .35s forwards; }
+.loader--out .loader__back { animation: ld-lift 1.2s var(--ease-io) .5s forwards; }
+@keyframes ld-stage-out { to { opacity: 0; transform: translateY(-46px) scale(.94); } }
+@keyframes ld-lift { to { transform: translateY(-100%); border-radius: 0 0 50% 50% / 0 0 22vh 22vh; } }
+/* until the curtains go up: no scrolling, hero waits */
+.is-intro:not(.intro-done) { overflow: hidden; }
+.is-intro:not(.intro-done) :is(.hero, .page-hero) [data-reveal] { opacity: 0; transform: translateY(26px); }
+.is-intro:not(.intro-done) :is(.hero, .page-hero) .is-split .w__i { transform: translateY(112%) rotate(4deg); }
+.is-intro:not(.intro-done) :is(.hero__media, .page-hero__media) img { animation-play-state: paused; }
 
 /* ---------- split text: words (or letters) rise out of a mask ---------- */
 .w { display: inline-block; overflow: hidden; vertical-align: top; padding: .12em .06em .22em; margin: -.12em -.06em -.22em; }
@@ -579,7 +613,7 @@ fieldset.field { border: 0; margin: 0; padding: 0; min-width: 0; }
 @media (pointer: fine) {
   body::after {
     content: ""; position: fixed; inset: 0; z-index: 250; pointer-events: none; opacity: .055;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1.1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-image: var(--grain);
   }
 }
 
@@ -617,6 +651,8 @@ html.lenis, html.lenis body { height: auto; }
   body { font-size: 16px; }
   .brand__name { font-size: 24px; }
   .site-header .logo { width: 40px; height: 40px; }
+  .loader__sub { letter-spacing: .2em; gap: 10px; }
+  .loader__sub::before, .loader__sub::after { width: 18px; }
   .brand { gap: 10px; }
   .hero__media img { object-position: 6% 10%; }
   .hero__inner { padding-bottom: 92px; }
@@ -637,5 +673,5 @@ html.lenis, html.lenis body { height: auto; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .js [data-reveal] { opacity: 1; transform: none; }
-  .hero__media img { transform: none; }
+  .hero__media img, .page-hero__media img { transform: none; }
 }
