@@ -1,9 +1,11 @@
 /* ==========================================================================
    Wongdhen Cafe — motion (every page, after main.js)
    One requestAnimationFrame loop drives: smooth wheel scrolling (Lenis,
-   mouse devices only), parallax, the hero drifting away, the evening band
-   growing to full width, words lighting up, marquees, the scroll progress
-   line, the header hiding on the way down and the seal turning as you scroll.
+   mouse devices only), words lighting up, marquees, the scroll progress line
+   and the seal turning as you scroll. Movement tied to the scroll position
+   (parallax, the hero drifting away) only runs with Lenis: on touch screens
+   the browser scrolls on its own thread and script-moved layers lag a frame
+   behind the finger, which shows as shaking.
    Reveals (split headings, image curtains, count-ups) run off one
    IntersectionObserver. Transform / opacity / clip-path only.
    With prefers-reduced-motion nothing moves and everything is shown.
@@ -134,29 +136,26 @@
   }
 
   /* ---------- things the loop moves ---------- */
-  var hero = $(".hero, .page-hero");
+  var linked = !!lenis; // scroll-linked movement only with Lenis (see the note at the top)
+  var hero = linked ? $(".hero, .page-hero") : null;
   var heroText = hero && $(".hero__inner, .page-hero__text", hero);
   var heroImg = hero && $(".hero__media img, .page-hero__media img", hero);
-  var bands = $$(".band");
   // k × 2 × height = the most a photo moves; it stays inside its headroom
   // (band photos are 16% taller than the band, revealed photos are scaled 1.1)
-  var para = $$("[data-parallax]").map(function (img) { return { img: img, box: img.closest("section") || img.parentElement, k: 0.035 }; })
+  var para = !linked ? [] : $$("[data-parallax]").map(function (img) { return { img: img, box: img.closest("section") || img.parentElement, k: 0.035 }; })
     .concat($$("[data-media] img").filter(function (img) { return !img.closest(".split__media--duo"); })
       .map(function (img) { return { img: img, box: img.closest("[data-media]"), k: 0.024 }; }));
   var rings = $$(".site-header .logo__ring, .site-footer .logo__ring, .marquee__sep .logo__ring");
-  var header = $("[data-header]");
-  var pinnedHeader = !!$(".menu-bar"); // the menu bar sits under the header, so it stays
   var bar = document.createElement("div"); bar.className = "progress"; bar.setAttribute("aria-hidden", "true");
   document.body.appendChild(bar);
 
-  var lastY = -1, vel = 0, lastT = 0, docH = 1, hidden = false, dirSign = -1;
+  var lastY = -1, vel = 0, lastT = 0, docH = 1, dirSign = -1;
   window.addEventListener("resize", function () { vh = window.innerHeight; lastY = -1; marquees.forEach(function (mq) { mq.measure(); }); });
 
-  function onScroll(y, dy) {
+  function onScroll(y) {
     // read everything first…
     docH = Math.max(1, root.scrollHeight - vh);
     var hr = hero && hero.getBoundingClientRect();
-    var bandR = bands.map(function (b) { return b.getBoundingClientRect(); });
     var paraR = para.map(function (o) { return o.box.getBoundingClientRect(); });
     var scrubR = scrubs.map(function (s) { return s.el.getBoundingClientRect(); });
 
@@ -164,26 +163,12 @@
     bar.style.transform = "scaleX(" + (y / docH).toFixed(4) + ")";
     rings.forEach(function (r) { r.style.transform = "rotate(" + (y * 0.12).toFixed(1) + "deg)"; });
 
-    if (header && !pinnedHeader) {
-      var limit = hr ? hr.height - 80 : 300, open = document.body.classList.contains("menu-open");
-      var hide = open || y <= limit ? false : dy > 1 ? true : dy < -2 ? false : hidden;
-      if (hide !== hidden) { hidden = hide; header.setAttribute("data-hidden", hide ? "true" : "false"); }
-    }
-
     if (hr && heroText && hr.bottom > 0) { // the hero drifts and fades as you leave it
       var p = clamp(-hr.top / hr.height, 0, 1);
       heroText.style.transform = "translate3d(0," + (p * hr.height * 0.32).toFixed(1) + "px,0)";
       heroText.style.opacity = (1 - p * 1.35).toFixed(3);
       if (heroImg) { heroImg.style.translate = "0 " + (p * hr.height * 0.18).toFixed(1) + "px"; heroImg.style.scale = (1 + p * 0.1).toFixed(4); }
     }
-
-    bands.forEach(function (b, i) { // the evening photo grows to full width as it arrives
-      var r = bandR[i];
-      if (r.top > vh || r.bottom < 0) return;
-      var e = 1 - Math.pow(1 - clamp(1 - r.top / vh, 0, 1), 3);
-      b.style.transform = "scale(" + (0.9 + 0.1 * e).toFixed(4) + ")";
-      b.style.borderRadius = ((1 - e) * 32).toFixed(1) + "px";
-    });
 
     para.forEach(function (o, i) { // photos move a little slower than the page
       var r = paraR[i];
@@ -210,7 +195,7 @@
     var dy = lastY < 0 ? 0 : y - lastY;
     vel += (dy - vel) * 0.18;
     if (Math.abs(dy) > 0.5) dirSign = dy > 0 ? -1 : 1;
-    if (y !== lastY) { onScroll(y, dy); lastY = y; }
+    if (y !== lastY) { onScroll(y); lastY = y; }
 
     marquees.forEach(function (mq) {
       if (!mq.on || !mq.w) return;
