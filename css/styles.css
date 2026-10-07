@@ -197,7 +197,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 .page-hero { position: relative; min-height: 78vh; min-height: 78svh; display: flex; align-items: flex-end; color: var(--cream); overflow: hidden; background: var(--night); }
 .page-hero__media { position: absolute; inset: 0; }
 .page-hero__media img { width: 100%; height: 100%; object-fit: cover; }
-.page-hero__media::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(14, 10, 7, .35), rgba(14, 10, 7, .1) 40%, rgba(14, 10, 7, .82)); }
+.page-hero__media::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(14, 10, 7, .62), rgba(14, 10, 7, .1) 65%), linear-gradient(180deg, rgba(14, 10, 7, .4), rgba(14, 10, 7, .12) 35%, rgba(14, 10, 7, .88)); }
 .page-hero__text { position: relative; padding-bottom: clamp(40px, 7vh, 84px); padding-top: calc(var(--header-h) + 40px); }
 .page-hero__text p { max-width: 46ch; color: rgba(244, 235, 223, .85); margin-top: 22px; }
 
@@ -303,7 +303,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 .map iframe { width: 100%; height: 100%; border: 0; display: block; filter: saturate(.85); }
 
 /* ---------- menu page ---------- */
-.menu-note { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center; background: var(--paper-2); border-radius: var(--radius); padding: 22px 26px; font-size: 15px; color: var(--ink-soft); }
+.menu-note { display: grid; grid-template-columns: 1fr; gap: 16px; justify-items: start; background: var(--paper-2); border-radius: var(--radius); padding: 22px 26px; font-size: 15px; color: var(--ink-soft); }
 .menu-note b { color: var(--ink); }
 .menu-bar { position: sticky; top: var(--header-h); z-index: 50; background: var(--paper); padding: 14px 0 12px; }
 .tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
@@ -459,7 +459,6 @@ fieldset.field { border: 0; margin: 0; padding: 0; min-width: 0; }
   .info-list > div { grid-template-columns: 1fr; gap: 4px; }
   .footer-top { grid-template-columns: 1fr; }
   .timeline li { grid-template-columns: 1fr; gap: 6px; }
-  .menu-note { grid-template-columns: 1fr; }
   .band::after { background: linear-gradient(180deg, rgba(14, 10, 7, .35), rgba(14, 10, 7, .88)); }
   .band { align-items: flex-end; padding-bottom: 56px; }
   .dock { left: 12px; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); }
