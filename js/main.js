@@ -225,46 +225,77 @@
   var menuRoot = $("[data-menu]");
   if (menuRoot && window.WONGDHEN_MENU) {
     var MENU = window.WONGDHEN_MENU;
-    var tabsEl = $("[data-menu-tabs]"), chipsEl = $("[data-menu-chips]");
-    var mark = function (it) {
-      if (it.veg === true) return '<i class="mark mark--veg" title="Vegetarian" aria-label="Vegetarian"></i>';
-      if (it.veg === false) return '<i class="mark mark--nonveg" title="Non-vegetarian" aria-label="Non-vegetarian"></i>';
+    var tabsEl = $("[data-menu-tabs]"), chipsEl = $("[data-menu-chips]"), dietEl = $("[data-menu-diet]");
+    var current = MENU[0].id;
+    var diet = ""; // Veg / Non-veg filter: "", "veg" or "nonveg"
+    var DIET = { veg: { only: "Veg only", word: "veg", mark: "Vegetarian" }, nonveg: { only: "Non-veg only", word: "non-veg", mark: "Non-vegetarian" } };
+    var optDiet = function (o) { // an option's kind from its name: "Chicken" → nonveg, "Mixed Veg" → veg, "8 pc" → ""
+      if (/\b(non-veg|chicken|buff|pork|prawns?|lamb|fish|salmon|tuna|seafood|crab|duck|ham|bacon|eggs?)\b/i.test(o)) return "nonveg";
+      if (/\b(veg|vegetables?|tofu|paneer|cottage cheese|edamame|corn)\b/i.test(o)) return "veg";
       return "";
     };
+    var dishDiet = function (it) { // "veg", "nonveg", "both" (options of each kind) or "" (not marked)
+      if (it.veg === true) return "veg";
+      if (it.veg === false) return "nonveg";
+      var kinds = (it.prices || []).map(function (p) { return p[0]; }).concat(it.options || []).map(optDiet);
+      var v = kinds.indexOf("veg") > -1, n = kinds.indexOf("nonveg") > -1;
+      return v && n ? "both" : v ? "veg" : n ? "nonveg" : "";
+    };
+    var mark = function (d) {
+      return DIET[d] ? '<i class="mark mark--' + d + '" title="' + DIET[d].mark + '" aria-label="' + DIET[d].mark + '"></i>' : "";
+    };
     var itemHTML = function (it) {
-      var right = "", under = "";
+      var right = "", under = "", d = dishDiet(it);
+      var keep = function () { return true; };
+      if (d === "both" && diet) { // filtered: show only the matching options
+        keep = function (o) { var k = optDiet(o); return !k || k === diet; };
+        d = diet;
+      }
       if (it.prices) {
-        under = it.prices.map(function (p) { return "<span>" + esc(p[0]) + (p[1] != null ? " <b>" + rupees(p[1]) + "</b>" : "") + "</span>"; }).join("");
+        under = it.prices.filter(function (p) { return keep(p[0]); }).map(function (p) { return "<span>" + esc(p[0]) + (p[1] != null ? " <b>" + rupees(p[1]) + "</b>" : "") + "</span>"; }).join("");
       } else {
         if (it.price != null) right = (it.from ? '<small>from</small> ' : "") + rupees(it.price);
-        if (it.options) under = it.options.map(function (o) { return "<span>" + esc(o) + "</span>"; }).join('<span aria-hidden="true">·</span>');
+        if (it.options) under = it.options.filter(keep).map(function (o) { return "<span>" + esc(o) + "</span>"; }).join('<span aria-hidden="true">·</span>');
       }
-      return '<div class="menu-item"><div class="menu-item__name">' + mark(it) + "<span>" + esc(it.name) + "</span>" + (it.spl ? '<span class="spl">Chef\'s special</span>' : "") + "</div>" +
+      return '<div class="menu-item"><div class="menu-item__name">' + mark(d) + "<span>" + esc(it.name) + "</span>" + (it.spl ? '<span class="spl">Chef\'s special</span>' : "") + "</div>" +
         '<div class="menu-item__price">' + right + "</div>" +
         (it.desc ? '<p class="menu-item__desc">' + esc(it.desc) + "</p>" : "") +
         (under ? '<div class="menu-item__variants">' + under + "</div>" : "") + "</div>";
     };
-    menuRoot.innerHTML = MENU.map(function (sec, si) {
-      return '<div class="menu-panel" id="panel-' + sec.id + '" role="tabpanel" aria-labelledby="tab-' + sec.id + '"' + (si ? " hidden" : "") + ">" +
-        sec.groups.map(function (g) {
+    var filterNote = function (sec, empty) {
+      var f = DIET[diet];
+      var text = sec.unfiltered ? esc(sec.label) + " aren't filtered, so everything is shown." :
+        empty ? "Nothing in " + esc(sec.label) + " is marked " + f.word + "." :
+        "Dishes that come both ways show their " + f.word + " options. Dishes we haven't marked, like egg dishes and most cakes, are hidden.";
+      return '<div class="menu-filter"><p>' + mark(diet) + "<b>" + f.only + ".</b> " + text + '</p><button type="button" data-diet-clear>Show the full menu</button></div>';
+    };
+    var renderMenu = function () {
+      menuRoot.innerHTML = MENU.map(function (sec) {
+        var filtered = diet && !sec.unfiltered;
+        var groups = sec.groups.map(function (g) {
+          var subs = g.sub.map(function (s) {
+            var items = filtered ? s.items.filter(function (it) { var d = dishDiet(it); return d === diet || d === "both"; }) : s.items;
+            return items.length ? '<div class="menu-sub"><h3 class="menu-sub__label">' + esc(s.label) + "</h3>" + items.map(itemHTML).join("") + "</div>" : "";
+          }).join("");
+          if (!subs) return "";
           var note = g.note || "";
           return '<section class="menu-group" id="' + g.id + '" data-group><div class="menu-group__aside"><div class="menu-group__sticky">' +
             '<h2 class="h2">' + esc(g.label) + "</h2>" + (note ? '<p class="note">' + esc(note) + "</p>" : "") +
             (g.image ? '<div class="menu-group__img"><img src="' + g.image + '" alt="" loading="lazy" width="900" height="1035"></div>' : "") +
-            '</div></div><div class="menu-group__list">' +
-            g.sub.map(function (s) {
-              return '<div class="menu-sub"><h3 class="menu-sub__label">' + esc(s.label) + "</h3>" + s.items.map(itemHTML).join("") + "</div>";
-            }).join("") + "</div></section>";
-        }).join("") + "</div>";
-    }).join("");
+            '</div></div><div class="menu-group__list">' + subs + "</div></section>";
+        }).join("");
+        return '<div class="menu-panel" id="panel-' + sec.id + '" role="tabpanel" aria-labelledby="tab-' + sec.id + '"' + (sec.id === current ? "" : " hidden") + ">" +
+          (diet ? filterNote(sec, !groups) : "") + groups + "</div>";
+      }).join("");
+    };
+    renderMenu();
 
     var bar = $(".menu-bar");
     var setBarH = function () { if (bar) document.documentElement.style.setProperty("--menubar-h", bar.offsetHeight + "px"); };
     setBarH(); window.addEventListener("resize", setBarH);
-    var current = MENU[0].id;
     var renderChips = function () {
       var sec = MENU.filter(function (s) { return s.id === current; })[0];
-      chipsEl.innerHTML = sec.groups.map(function (g, i) {
+      chipsEl.innerHTML = sec.groups.filter(function (g) { return document.getElementById(g.id); }).map(function (g, i) {
         return '<a class="chip" href="#' + g.id + '"' + (i === 0 ? ' aria-current="true"' : "") + ">" + esc(g.label) + "</a>";
       }).join("");
     };
@@ -273,26 +304,42 @@
       $$(".tab", tabsEl).forEach(function (t) { t.setAttribute("aria-selected", t.getAttribute("data-tab") === id ? "true" : "false"); });
       $$(".menu-panel", menuRoot).forEach(function (p) { p.hidden = p.id !== "panel-" + id; });
       renderChips();
-      if (scroll) { var first = $("#panel-" + id + " [data-group]", menuRoot); if (first) first.scrollIntoView({ behavior: reduce ? "auto" : "smooth" }); }
+      if (scroll) { var first = $("#panel-" + id, menuRoot).firstElementChild; if (first) first.scrollIntoView({ behavior: reduce ? "auto" : "smooth" }); }
     };
     tabsEl.innerHTML = MENU.map(function (s, i) {
       return '<button class="tab" role="tab" id="tab-' + s.id + '" data-tab="' + s.id + '" aria-controls="panel-' + s.id + '" aria-selected="' + (i ? "false" : "true") + '">' + esc(s.label) + "</button>";
     }).join("");
     $$(".tab", tabsEl).forEach(function (t) { t.addEventListener("click", function () { selectTab(t.getAttribute("data-tab"), true); }); });
     renderChips();
-    if ("IntersectionObserver" in window) {
-      var gio = new IntersectionObserver(function (entries) {
-        entries.forEach(function (e) {
-          if (!e.isIntersecting) return;
-          $$(".chip", chipsEl).forEach(function (c) {
-            var on = c.getAttribute("href") === "#" + e.target.id;
-            c.setAttribute("aria-current", on ? "true" : "false");
-            if (on) chipsEl.scrollTo({ left: c.offsetLeft - 24, behavior: reduce ? "auto" : "smooth" });
-          });
+    var gio = ("IntersectionObserver" in window) ? new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        $$(".chip", chipsEl).forEach(function (c) {
+          var on = c.getAttribute("href") === "#" + e.target.id;
+          c.setAttribute("aria-current", on ? "true" : "false");
+          if (on) chipsEl.scrollTo({ left: c.offsetLeft - 24, behavior: reduce ? "auto" : "smooth" });
         });
-      }, { rootMargin: "-40% 0px -55% 0px" });
+      });
+    }, { rootMargin: "-40% 0px -55% 0px" }) : null;
+    var observeGroups = function () {
+      if (!gio) return;
+      gio.disconnect();
       $$("[data-group]", menuRoot).forEach(function (g) { gio.observe(g); });
-    }
+    };
+    observeGroups();
+
+    // Veg / Non-veg: tap one to filter, tap it again for the full menu
+    var setDiet = function (d) {
+      diet = d;
+      $$("[data-diet]", dietEl).forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-diet") === d ? "true" : "false"); });
+      var top = menuRoot.getBoundingClientRect().top, under = bar.getBoundingClientRect().bottom;
+      renderMenu(); renderChips(); observeGroups();
+      if (top < under) window.scrollBy(0, top - under); // was partway down the menu: back to its start
+    };
+    if (dietEl) $$("[data-diet]", dietEl).forEach(function (b) {
+      b.addEventListener("click", function () { var d = b.getAttribute("data-diet"); setDiet(diet === d ? "" : d); });
+    });
+    menuRoot.addEventListener("click", function (e) { if (e.target.closest("[data-diet-clear]")) setDiet(""); });
     // deep links: menu.html#drinks (a tab) or menu.html#pizza (a group)
     var hash = location.hash.slice(1);
     if (hash) {
