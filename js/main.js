@@ -100,6 +100,7 @@
     document.documentElement.style.overflow = open ? "hidden" : "";
     if (burger) { burger.setAttribute("aria-expanded", open ? "true" : "false"); burger.setAttribute("aria-label", open ? "Close menu" : "Open menu"); }
     if (mnav) mnav.setAttribute("aria-hidden", open ? "false" : "true");
+    if (window.wdLenis) window.wdLenis[open ? "stop" : "start"](); // smooth scroll (motion.js)
   }
   if (burger) burger.addEventListener("click", function () { setMenu(!document.body.classList.contains("menu-open")); });
   if (mnav) $$("a", mnav).forEach(function (a) { a.addEventListener("click", function () { setMenu(false); }); });
@@ -110,23 +111,6 @@
     entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("is-in"); revealIO.unobserve(e.target); } });
   }, { rootMargin: "0px 0px -8% 0px" }) : null;
   observeReveal(document);
-
-  /* ---------- parallax on full-bleed bands (transform only) ---------- */
-  var pImgs = $$("[data-parallax]");
-  if (pImgs.length && !reduce) {
-    var pTick = false;
-    var pUpdate = function () {
-      pImgs.forEach(function (img) {
-        var r = (img.closest("section") || img.parentElement).getBoundingClientRect();
-        if (r.bottom < -200 || r.top > window.innerHeight + 200) return;
-        var k = (r.top + r.height / 2 - window.innerHeight / 2) / window.innerHeight;
-        img.style.transform = "translate3d(0," + (k * -6).toFixed(2) + "%,0)";
-      });
-      pTick = false;
-    };
-    window.addEventListener("scroll", function () { if (!pTick) { pTick = true; requestAnimationFrame(pUpdate); } }, { passive: true });
-    pUpdate();
-  }
 
   /* ---------- reviews (before strips so they can be measured) ---------- */
   var revWrap = $("[data-reviews]");
@@ -290,9 +274,11 @@
     };
     renderMenu();
 
+    // the bar's real height (tabs + chips), so sticky headings and jump links land below it
     var bar = $(".menu-bar");
     var setBarH = function () { if (bar) document.documentElement.style.setProperty("--menubar-h", bar.offsetHeight + "px"); };
-    setBarH(); window.addEventListener("resize", setBarH);
+    if (bar && "ResizeObserver" in window) new ResizeObserver(setBarH).observe(bar);
+    window.addEventListener("resize", setBarH);
     var renderChips = function () {
       var sec = MENU.filter(function (s) { return s.id === current; })[0];
       chipsEl.innerHTML = sec.groups.filter(function (g) { return document.getElementById(g.id); }).map(function (g, i) {
@@ -302,15 +288,28 @@
     var selectTab = function (id, scroll) {
       current = id;
       $$(".tab", tabsEl).forEach(function (t) { t.setAttribute("aria-selected", t.getAttribute("data-tab") === id ? "true" : "false"); });
+      moveThumb();
       $$(".menu-panel", menuRoot).forEach(function (p) { p.hidden = p.id !== "panel-" + id; });
       renderChips();
       if (scroll) { var first = $("#panel-" + id, menuRoot).firstElementChild; if (first) first.scrollIntoView({ behavior: reduce ? "auto" : "smooth" }); }
     };
     tabsEl.innerHTML = MENU.map(function (s, i) {
-      return '<button class="tab" role="tab" id="tab-' + s.id + '" data-tab="' + s.id + '" aria-controls="panel-' + s.id + '" aria-selected="' + (i ? "false" : "true") + '">' + esc(s.label) + "</button>";
+      return '<button class="tab" role="tab" id="tab-' + s.id + '" data-tab="' + s.id + '" aria-controls="panel-' + s.id + '" aria-selected="' + (i ? "false" : "true") + '"><span>' + esc(s.label) + "</span></button>";
     }).join("");
     $$(".tab", tabsEl).forEach(function (t) { t.addEventListener("click", function () { selectTab(t.getAttribute("data-tab"), true); }); });
+    // the dark pill slides to the selected tab
+    var thumb = document.createElement("span");
+    thumb.className = "tabs__thumb"; thumb.setAttribute("aria-hidden", "true");
+    tabsEl.appendChild(thumb); tabsEl.classList.add("has-thumb");
+    function moveThumb() {
+      var t = $('.tab[aria-selected="true"]', tabsEl);
+      if (t) { thumb.style.width = t.offsetWidth + "px"; thumb.style.transform = "translateX(" + t.offsetLeft + "px)"; }
+    }
+    moveThumb();
+    window.addEventListener("resize", moveThumb);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(moveThumb);
     renderChips();
+    setBarH();
     var gio = ("IntersectionObserver" in window) ? new IntersectionObserver(function (entries) {
       entries.forEach(function (e) {
         if (!e.isIntersecting) return;
@@ -334,6 +333,7 @@
       $$("[data-diet]", dietEl).forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-diet") === d ? "true" : "false"); });
       var top = menuRoot.getBoundingClientRect().top, under = bar.getBoundingClientRect().bottom;
       renderMenu(); renderChips(); observeGroups();
+      if (window.wdMotion) window.wdMotion.observe(menuRoot);
       if (top < under) window.scrollBy(0, top - under); // was partway down the menu: back to its start
     };
     if (dietEl) $$("[data-diet]", dietEl).forEach(function (b) {
