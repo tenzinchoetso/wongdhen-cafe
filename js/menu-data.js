@@ -18,6 +18,15 @@
    • no price                → listed by name only
    • veg: true / false       → green / red mark (omitted when mixed)
    • spl: true               → chef's special (chef hat on the printed menu)
+
+   Veg / Non-veg filter (the toggle on menu.html)
+   • "Veg" shows dishes with veg: true, "Non-veg" dishes with veg: false.
+   • A dish without veg whose options include both kinds ("Veg", "Tofu",
+     "Cottage Cheese"… and "Chicken", "Prawn", "Pork"…) shows in both, with
+     just the matching options. The words are listed in js/main.js.
+   • Any other dish without veg (egg dishes, most cakes) shows under neither:
+     give it veg: true / false to put it in one.
+   • unfiltered: true (on a section) → the filter leaves it whole (drinks).
    ========================================================================== */
 window.WONGDHEN_MENU = [
   {
@@ -512,7 +521,7 @@ window.WONGDHEN_MENU = [
     ]
   },
   {
-    id: "drinks", label: "Drinks",
+    id: "drinks", label: "Drinks", unfiltered: true,
     groups: [
       {
         id: "coffee", label: "Coffee", image: "images/latte.webp",
