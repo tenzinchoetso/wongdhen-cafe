@@ -11,6 +11,10 @@
    • Prices on Google's menu highlights (Oct 2026) are higher (probably the
      delivery-app menu). THE OWNER MUST CONFIRM ALL PRICES BEFORE LAUNCH.
 
+   PRICES ON THE LIVE SITE (launch, 7 Oct 2026): only the 2026 breakfast card
+   prices are shown. The June 2025 printed-menu prices are hidden until the
+   owner confirms them (brief Q5/Q17). To show them again, set printedMenu: true.
+
    Format
    • price: 345              → one price
    • prices: [["Veg",345],["Chicken",405]] → priced options
@@ -18,12 +22,14 @@
    • veg: true / false       → green / red mark (omit when the item has both)
    • spl: true               → chef's special (chef hat on the printed menu)
    ========================================================================== */
+window.WONGDHEN_PRICES = { breakfastCard: true, printedMenu: false };
+
 window.WONGDHEN_MENU = [
   {
     id: "breakfast", label: "Breakfast",
     groups: [
       {
-        id: "set-breakfasts", label: "Set breakfasts", image: "images/breakfast-sets.webp",
+        id: "set-breakfasts", label: "Set breakfasts", image: "images/breakfast-sets.webp", source: "breakfast-card",
         note: "Served 8 am – 12 noon. Each set comes with a coffee (hot or iced) or a tea.",
         sub: [
           { label: "Set breakfasts", items: [
@@ -269,6 +275,7 @@ window.WONGDHEN_MENU = [
       {
         id: "pizza", label: "Wood-fired pizza", image: "images/dish-pizza.webp",
         note: "Dough fermented for 24 hours, baked in our wood-fired oven. Thin crust or classic Napoli (hand-tossed). Whole-wheat sourdough base +₹100 · extra cheese +₹80.",
+        noteNoPrice: "Dough fermented for 24 hours, baked in our wood-fired oven. Thin crust or classic Napoli (hand-tossed); ask for a whole-wheat sourdough base or extra cheese.",
         sub: [
           { label: "Pizza · veg", items: [
             { name: "Margherita", price: 405, veg: true },
@@ -369,6 +376,7 @@ window.WONGDHEN_MENU = [
       {
         id: "sandwiches", label: "Burgers & sandwiches", image: "images/dish-croissant.webp",
         note: "Extra cheese slice @70 · bacon (2 pc) @100. Baguette sandwiches come with fries & salad.",
+        noteNoPrice: "Add an extra cheese slice or bacon to any of them. Baguette sandwiches come with fries & salad.",
         sub: [
           { label: "Burgers, sandwiches & wraps", items: [
             { name: "Club Sandwich", prices: [["Veg", 315], ["Chicken", 355]] },
@@ -458,6 +466,7 @@ window.WONGDHEN_MENU = [
       {
         id: "coffee", label: "Coffee", image: "images/latte.webp",
         note: "Add a flavour @30: hazelnut, vanilla, caramel or tiramisu.",
+        noteNoPrice: "Add a flavour: hazelnut, vanilla, caramel or tiramisu.",
         sub: [
           { label: "Hot coffee", items: [
             { name: "Espresso", prices: [["Single", 130], ["Double", 180]] },

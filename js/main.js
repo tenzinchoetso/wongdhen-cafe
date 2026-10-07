@@ -231,25 +231,31 @@
       if (it.veg === false) return '<i class="mark mark--nonveg" title="Non-vegetarian" aria-label="Non-vegetarian"></i>';
       return "";
     };
-    var itemHTML = function (it) {
+    var PRICES = window.WONGDHEN_PRICES || { breakfastCard: true, printedMenu: true };
+    var showFor = function (g) { return g.source === "breakfast-card" ? PRICES.breakfastCard : PRICES.printedMenu; };
+    var noPrice = function (t) { return String(t).replace(/\s*(?:\+₹|@)\s*\d+/g, ""); }; // "Add honey @10." → "Add honey."
+    var itemHTML = function (it, show) {
       var right = "", under = "";
-      if (it.prices) under = it.prices.map(function (p) { return "<span>" + esc(p[0]) + " <b>" + rupees(p[1]) + "</b></span>"; }).join("");
-      else if (it.price === null || it.price === undefined) right = '<span class="ask">Ask us</span>';
-      else right = rupees(it.price);
+      if (it.prices) under = it.prices.map(function (p) { return "<span>" + esc(p[0]) + (show ? " <b>" + rupees(p[1]) + "</b>" : "") + "</span>"; }).join(show ? "" : '<span aria-hidden="true">·</span>');
+      else if (it.price === null || it.price === undefined) right = show ? '<span class="ask">Ask us</span>' : "";
+      else right = show ? rupees(it.price) : "";
+      var desc = it.desc ? (show ? it.desc : noPrice(it.desc)) : "";
       return '<div class="menu-item"><div class="menu-item__name">' + mark(it) + "<span>" + esc(it.name) + "</span>" + (it.spl ? '<span class="spl">Chef\'s special</span>' : "") + "</div>" +
         '<div class="menu-item__price' + (right.indexOf("ask") > -1 ? " ask" : "") + '">' + right + "</div>" +
-        (it.desc ? '<p class="menu-item__desc">' + esc(it.desc) + "</p>" : "") +
+        (desc ? '<p class="menu-item__desc">' + esc(desc) + "</p>" : "") +
         (under ? '<div class="menu-item__variants">' + under + "</div>" : "") + "</div>";
     };
     menuRoot.innerHTML = MENU.map(function (sec, si) {
       return '<div class="menu-panel" id="panel-' + sec.id + '" role="tabpanel" aria-labelledby="tab-' + sec.id + '"' + (si ? " hidden" : "") + ">" +
         sec.groups.map(function (g) {
+          var show = showFor(g);
+          var note = g.note ? (show ? g.note : (g.noteNoPrice || noPrice(g.note))) : "";
           return '<section class="menu-group" id="' + g.id + '" data-group><div class="menu-group__aside"><div class="menu-group__sticky">' +
-            '<h2 class="h2">' + esc(g.label) + "</h2>" + (g.note ? '<p class="note">' + esc(g.note) + "</p>" : "") +
+            '<h2 class="h2">' + esc(g.label) + "</h2>" + (note ? '<p class="note">' + esc(note) + "</p>" : "") +
             (g.image ? '<div class="menu-group__img"><img src="' + g.image + '" alt="" loading="lazy" width="900" height="1035"></div>' : "") +
             '</div></div><div class="menu-group__list">' +
             g.sub.map(function (s) {
-              return '<div class="menu-sub"><h3 class="menu-sub__label">' + esc(s.label) + "</h3>" + s.items.map(itemHTML).join("") + "</div>";
+              return '<div class="menu-sub"><h3 class="menu-sub__label">' + esc(show ? s.label : noPrice(s.label)) + "</h3>" + s.items.map(function (it) { return itemHTML(it, show); }).join("") + "</div>";
             }).join("") + "</div></section>";
         }).join("") + "</div>";
     }).join("");

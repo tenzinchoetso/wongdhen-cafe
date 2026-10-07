@@ -1,2 +1,4 @@
 User-agent: *
-Disallow: /
+Allow: /
+
+Sitemap: https://tenzinchoetso.github.io/wongdhen-cafe/sitemap.xml
