@@ -83,18 +83,6 @@
     });
   })();
 
-  /* ---------- header: solid after the hero ---------- */
-  var header = $("[data-header]");
-  var hero = $("[data-hero]");
-  function headerState() {
-    if (!header) return;
-    var limit = hero ? hero.offsetTop + hero.offsetHeight - header.offsetHeight : 40;
-    header.setAttribute("data-solid", window.scrollY > limit ? "true" : "false");
-  }
-  headerState();
-  window.addEventListener("scroll", headerState, { passive: true });
-  window.addEventListener("resize", headerState);
-
   /* ---------- mobile nav ---------- */
   var burger = $("[data-burger]"), mnav = $("[data-mnav]");
   function setMenu(open) {
@@ -102,7 +90,6 @@
     document.documentElement.style.overflow = open ? "hidden" : "";
     if (burger) { burger.setAttribute("aria-expanded", open ? "true" : "false"); burger.setAttribute("aria-label", open ? "Close menu" : "Open menu"); }
     if (mnav) mnav.setAttribute("aria-hidden", open ? "false" : "true");
-    if (window.wdLenis) window.wdLenis[open ? "stop" : "start"](); // smooth scroll (motion.js)
   }
   if (burger) burger.addEventListener("click", function () { setMenu(!document.body.classList.contains("menu-open")); });
   if (mnav) $$("a", mnav).forEach(function (a) { a.addEventListener("click", function () { setMenu(false); }); });
