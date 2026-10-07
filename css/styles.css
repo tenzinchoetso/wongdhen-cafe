@@ -374,7 +374,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 .form { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .field { display: grid; gap: 8px; }
 .field--full { grid-column: 1 / -1; }
-.field label, .field legend { font: 600 12px/1.4 var(--sans); letter-spacing: .16em; text-transform: uppercase; color: var(--ink-soft); padding: 0; }
+.field > label, .field > legend { font: 600 12px/1.4 var(--sans); letter-spacing: .16em; text-transform: uppercase; color: var(--ink-soft); padding: 0; }
 .field input, .field select, .field textarea {
   width: 100%; min-height: 54px; padding: 14px 18px;
   font: 400 16px/1.4 var(--sans); color: var(--ink);
