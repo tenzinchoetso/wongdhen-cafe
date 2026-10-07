@@ -18,12 +18,11 @@
   var mouse = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
   var vh = window.innerHeight;
 
-  // the home intro (html.is-intro, set in <head>) is pure CSS; tidy it away afterwards
-  var loader = $(".loader");
-  if (loader) setTimeout(function () { loader.remove(); }, root.classList.contains("is-intro") ? 2400 : 0);
   if (reduce || !("IntersectionObserver" in window)) { window.wdMotion = { observe: function () {} }; return; }
   root.classList.add("motion");
-  var introDelay = root.classList.contains("is-intro") ? 1.3 : 0;
+  // the loading screen (inline in each page) adds html.intro-done as its curtains lift;
+  // until then the hero's reveals wait (styles.css) and the page doesn't scroll
+  var waiting = root.classList.contains("is-intro") && !root.classList.contains("intro-done");
 
   /* ---------- split text ---------- */
   // data-split        → each word rises out of its own mask
@@ -51,7 +50,7 @@
       });
     })(el, true);
     var d = parseFloat(getComputedStyle(el).getPropertyValue("--d")) || 0;
-    if (el.closest(".hero, .page-hero")) d += introDelay + 0.1;
+    if (el.closest(".hero, .page-hero")) d += 0.15;
     $$(".w__i", el).forEach(function (w, i) { w.style.transitionDelay = (d + i * (chars ? 0.045 : 0.055)).toFixed(3) + "s"; });
     el.classList.add("is-split");
   }
@@ -131,6 +130,7 @@
   if (mouse && window.Lenis) {
     lenis = new window.Lenis({ lerp: 0.085, wheelMultiplier: 0.95, autoRaf: false });
     window.wdLenis = lenis; // main.js stops it while the mobile menu is open
+    if (waiting) { lenis.stop(); window.addEventListener("wd:intro-done", function () { lenis.start(); }); }
   }
 
   /* ---------- things the loop moves ---------- */

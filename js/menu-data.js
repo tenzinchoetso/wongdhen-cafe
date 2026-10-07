@@ -24,7 +24,8 @@
    • A dish without veg whose options include both kinds ("Veg", "Tofu",
      "Cottage Cheese"… and "Chicken", "Prawn", "Pork"…) shows in both, with
      just the matching options. The words are listed in js/main.js.
-   • Any other dish without veg (egg dishes, most cakes) shows under neither:
+   • Egg counts as veg: egg dishes have veg: true, and "Egg" in an option is veg.
+   • Any other dish without veg (pancakes, most cakes) shows under neither:
      give it veg: true / false to put it in one.
    • unfiltered: true (on a section) → the filter leaves it whole (drinks).
    ========================================================================== */
@@ -43,15 +44,15 @@ window.WONGDHEN_MENU = [
             { name: "Non-veg European Breakfast", price: 485, veg: false, desc: "Toast, baked beans, two chicken sausages & two eggs your way." }
           ]},
           { label: "Egg specials", items: [
-            { name: "Egg Benedict", price: 450, desc: "Poached eggs on brioche with hollandaise, potato griddle & salad." },
-            { name: "Turkish Eggs", price: 450, desc: "Poached eggs over garlic yogurt with paprika butter & sourdough." },
-            { name: "Hot Chilli Cheesy Sunny-Side Eggs", price: 450, desc: "Spicy cheesy eggs with sourdough." },
-            { name: "Hot Honey Fried Eggs", price: 450, desc: "Crispy fried eggs glazed with hot honey." },
-            { name: "3-Egg Omelette", options: ["Plain", "Masala", "Cheese"], desc: "Served with sourdough toast & potato griddle." }
+            { name: "Egg Benedict", price: 450, veg: true, desc: "Poached eggs on brioche with hollandaise, potato griddle & salad." },
+            { name: "Turkish Eggs", price: 450, veg: true, desc: "Poached eggs over garlic yogurt with paprika butter & sourdough." },
+            { name: "Hot Chilli Cheesy Sunny-Side Eggs", price: 450, veg: true, desc: "Spicy cheesy eggs with sourdough." },
+            { name: "Hot Honey Fried Eggs", price: 450, veg: true, desc: "Crispy fried eggs glazed with hot honey." },
+            { name: "3-Egg Omelette", veg: true, options: ["Plain", "Masala", "Cheese"], desc: "Served with sourdough toast & potato griddle." }
           ]},
           { label: "Burritos", items: [
             { name: "Mushroom & Cottage Cheese Burrito", price: 450, veg: true },
-            { name: "Scrambled Egg Burrito", price: 460 },
+            { name: "Scrambled Egg Burrito", price: 460, veg: true },
             { name: "Chicken Ham Egg Burrito", price: 490, veg: false }
           ]}
         ]
@@ -61,18 +62,18 @@ window.WONGDHEN_MENU = [
         sub: [
           { label: "Breakfast sandwiches", items: [
             { name: "Mushroom Croissant Sandwich", price: 405, veg: true },
-            { name: "Egg Croissant Sandwich", price: 405 },
+            { name: "Egg Croissant Sandwich", price: 405, veg: true },
             { name: "Egg & Chicken Ham Croissant Sandwich", price: 445, veg: false },
-            { name: "Japanese Egg Sando", price: 415 },
+            { name: "Japanese Egg Sando", price: 415, veg: true },
             { name: "Cottage Cheese Akuri Sandwich", price: 405, veg: true },
             { name: "Cream Cheese Sourdough Toast", price: 425, veg: true },
             { name: "Chicken Ham & Cheese Melt Sandwich", price: 445, veg: false }
           ]},
           { label: "Open toasts", items: [
             { name: "Avocado Sourdough Toast", price: 450 },
-            { name: "Chilli Fried Egg Avocado Toast", price: 485 },
-            { name: "Boiled Egg Avocado Toast", price: 480 },
-            { name: "Sunny-Side Avocado Toast", price: 480 }
+            { name: "Chilli Fried Egg Avocado Toast", price: 485, veg: true },
+            { name: "Boiled Egg Avocado Toast", price: 480, veg: true },
+            { name: "Sunny-Side Avocado Toast", price: 480, veg: true }
           ]}
         ]
       },
