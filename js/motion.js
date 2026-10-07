@@ -1,8 +1,8 @@
 /* ==========================================================================
    Wongdhen Cafe — motion (every page, after main.js)
    Everything here plays ONCE, when it first comes into view, and then stands
-   still: headings rise in word by word, photos open like a curtain, menu
-   sections drift up, numbers count up. The only thing that follows the scroll
+   still: page headlines rise in word by word and photos open like a curtain
+   (once the photo has loaded). The only thing that follows the scroll
    is the logo's ornament ring, which turns in place. There is no smooth-scroll
    library and no animation loop, so scrolling is the browser's own and nothing
    can flicker while you scroll. The marquee is a plain CSS animation.
@@ -36,54 +36,45 @@
   }
   function split(el) {
     var chars = el.getAttribute("data-split") === "chars";
+    var d = parseFloat(getComputedStyle(el).getPropertyValue("--d")) || 0; // read before the spans exist (no style flush after)
+    if (el.closest(".hero, .page-hero")) d += 0.15;
     if (chars && !el.hasAttribute("aria-label")) el.setAttribute("aria-label", el.textContent.replace(/\s+/g, " ").trim());
+    el.classList.add("is-split");
     (function walk(node, top) {
       [].slice.call(node.childNodes).forEach(function (n) {
         if (n.nodeType === 3) { if (n.textContent.trim()) node.replaceChild(wrap(n.textContent, chars && top), n); }
         else if (n.nodeType === 1 && n.tagName !== "BR") walk(n, false);
       });
     })(el, true);
-    var d = parseFloat(getComputedStyle(el).getPropertyValue("--d")) || 0;
-    if (el.closest(".hero, .page-hero")) d += 0.15;
     $$(".w__i", el).forEach(function (w, i) { w.style.transitionDelay = (d + i * (chars ? 0.04 : 0.05)).toFixed(3) + "s"; });
-    el.classList.add("is-split");
   }
 
-  /* ---------- count-ups: "4.4" counts up from 0 the first time it is seen ---------- */
-  function countUp(el) {
-    var txt = el.getAttribute("data-countup"), target = parseFloat(txt.replace(/,/g, ""));
-    var dec = (txt.split(".")[1] || "").length, t0 = performance.now(), D = 1600;
-    var fmt = function (v) { return dec ? v.toFixed(dec) : Math.round(v).toLocaleString("en-IN"); };
-    (function step(t) {
-      var k = Math.min(1, Math.max(0, (t - t0) / D)), e = 1 - Math.pow(2, -10 * k);
-      el.textContent = fmt(k === 1 ? target : target * e);
-      if (k < 1) requestAnimationFrame(step);
-    })(t0);
+  /* ---------- one observer; every element is revealed once and then left alone ----------
+     It fires a little BEFORE an element enters the screen (6% below the bottom edge),
+     so nothing can sit invisible at the bottom of the screen when scrolling stops.
+     A photo's curtain waits until the photo has loaded, so it never opens on an empty frame. */
+  function show(el) {
+    var img = el.hasAttribute("data-media") && el.querySelector("img");
+    if (!img || img.complete) { el.classList.add("is-in"); return; }
+    var done = function () { el.classList.add("is-in"); };
+    img.addEventListener("load", done, { once: true });
+    img.addEventListener("error", done, { once: true });
+    setTimeout(done, 3000); // never keep a frame closed for long
   }
-
-  /* ---------- one observer; every element is revealed once and then left alone ---------- */
   var io = new IntersectionObserver(function (entries) {
     entries.forEach(function (e) {
       if (!e.isIntersecting) return;
-      e.target.classList.add("is-in");
-      if (e.target.hasAttribute("data-countup")) countUp(e.target);
+      show(e.target);
       io.unobserve(e.target);
     });
-  }, { rootMargin: "0px 0px -8% 0px" });
+  }, { rootMargin: "0px 0px 6% 0px" });
 
   function observe(scope) {
     $$("[data-split]:not(.is-split)", scope).forEach(function (el) { split(el); io.observe(el); });
     $$("[data-media]:not(.is-in)", scope).forEach(function (el) { io.observe(el); });
-    $$(".menu-sub", scope).forEach(function (el) { el.setAttribute("data-rise", ""); io.observe(el); });
-    $$("[data-countup]:not(.is-in)", scope).forEach(function (el) {
-      if (!el.getAttribute("data-countup")) el.setAttribute("data-countup", el.textContent.trim());
-      var dec = (el.getAttribute("data-countup").split(".")[1] || "").length;
-      el.textContent = dec ? (0).toFixed(dec) : "0";
-      io.observe(el);
-    });
   }
   observe(document);
-  window.wdMotion = { observe: observe }; // main.js calls this after re-drawing the menu
+  window.wdMotion = { observe: observe };
 
   /* ---------- marquees: a CSS loop; the script only builds two identical halves ----------
      The line is repeated until one half is wider than the screen, the half is
