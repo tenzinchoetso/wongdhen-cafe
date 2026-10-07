@@ -2,10 +2,11 @@
    Wongdhen Cafe — motion (every page, after main.js)
    Everything here plays ONCE, when it first comes into view, and then stands
    still: headings rise in word by word, photos open like a curtain, menu
-   sections drift up, numbers count up. Nothing follows the scroll position,
-   there is no smooth-scroll library and no animation loop, so scrolling is the
-   browser's own and nothing can flicker while you scroll. The marquee is a
-   plain CSS animation. With prefers-reduced-motion nothing moves at all.
+   sections drift up, numbers count up. The only thing that follows the scroll
+   is the logo's ornament ring, which turns in place. There is no smooth-scroll
+   library and no animation loop, so scrolling is the browser's own and nothing
+   can flicker while you scroll. The marquee is a plain CSS animation.
+   With prefers-reduced-motion nothing moves at all.
    ========================================================================== */
 (function () {
   "use strict";
@@ -114,6 +115,21 @@
       if (window.innerWidth === lastW) return; // phone toolbars change the height only: leave it running
       lastW = window.innerWidth; clearTimeout(t); t = setTimeout(build, 250);
     });
+  }
+
+  /* ---------- the seal turns as you scroll (header + footer logos) ----------
+     Only the logo's ornament ring rotates, at most once per frame while the page
+     scrolls (a full turn every 3000px); nothing changes position. */
+  var rings = $$(".site-header .logo__ring, .site-footer .logo__ring");
+  if (rings.length) {
+    var ticking = false;
+    var turn = function () {
+      ticking = false;
+      var a = "rotate(" + (window.scrollY * 0.12).toFixed(1) + "deg)";
+      rings.forEach(function (r) { r.style.transform = a; });
+    };
+    window.addEventListener("scroll", function () { if (!ticking) { ticking = true; requestAnimationFrame(turn); } }, { passive: true });
+    turn();
   }
 
   // mobile menu links arrive one by one (CSS reads --i)
