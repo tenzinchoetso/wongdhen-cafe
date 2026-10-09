@@ -488,7 +488,7 @@ fieldset.field { border: 0; margin: 0; padding: 0; min-width: 0; }
    never runs (html never gets .motion), everything shows after 2.5 s.
    ========================================================================== */
 
-/* ---------- loading screen: the first page of every visit ----------
+/* ---------- loading screen: every page load and reload ----------
    The seal draws itself line by line, fills in, the name rises, a counter
    follows the page load, then two curtains lift (copper, then night).
    html.is-intro is set in <head>; the inline script after .loader runs it
@@ -575,6 +575,7 @@ fieldset.field { border: 0; margin: 0; padding: 0; min-width: 0; }
 /* a link to a spot further down the page: hold the first paint until the page has jumped there (main.js),
    so the top of the page never flashes first. Fail-safe: shown after 1.2 s regardless. */
 .wd-jump body { visibility: hidden; animation: wd-show 0s 1.2s forwards; }
+.wd-jump .loader { visibility: visible; } /* the loading screen still shows straight away */
 @keyframes wd-show { to { visibility: visible; } }
 @keyframes wd-failsafe-cover { to { transform: scaleY(0); } }
 
