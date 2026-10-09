@@ -53,13 +53,19 @@
      It fires a little BEFORE an element enters the screen (6% below the bottom edge),
      so nothing can sit invisible at the bottom of the screen when scrolling stops.
      A photo's curtain waits until the photo has loaded, so it never opens on an empty frame. */
+  var fontsReady = document.fonts && document.fonts.ready ? document.fonts.ready : null;
   function show(el) {
-    var img = el.hasAttribute("data-media") && el.querySelector("img");
-    if (!img || img.complete) { el.classList.add("is-in"); return; }
     var done = function () { el.classList.add("is-in"); };
-    img.addEventListener("load", done, { once: true });
-    img.addEventListener("error", done, { once: true });
-    setTimeout(done, 3000); // never keep a frame closed for long
+    var later = setTimeout(done, 3000); // never keep anything waiting for long
+    var go = function () { clearTimeout(later); done(); };
+    // page headlines wait for the web fonts, so they never rise in a fallback font and then re-wrap
+    if (el.hasAttribute("data-split") && fontsReady) { fontsReady.then(go, go); return; }
+    // photos wait until decoded, so the cover never lifts off an empty frame
+    var img = el.hasAttribute("data-media") && el.querySelector("img");
+    if (!img) { go(); return; }
+    var decode = function () { if (img.decode) img.decode().then(go, go); else go(); };
+    if (img.complete) decode();
+    else { img.addEventListener("load", decode, { once: true }); img.addEventListener("error", go, { once: true }); }
   }
   var io = new IntersectionObserver(function (entries) {
     entries.forEach(function (e) {
