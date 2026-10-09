@@ -13,6 +13,7 @@
   var HOURS = window.WONGDHEN_HOURS || { days: [] };
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var DEFAULT_WA = "Hello Wongdhen Cafe! I'd like to book a table.";
+  document.documentElement.classList.add("wd-main"); // this script is running (see the reveal safety net in styles.css)
   // safety net for the loading screen: never keep the page waiting
   if (document.documentElement.classList.contains("is-intro")) setTimeout(function () { document.documentElement.classList.add("intro-done"); }, 9000);
 
@@ -35,6 +36,28 @@
   function toMins(hhmm) { var p = hhmm.split(":"); return +p[0] * 60 + +p[1]; }
   function rupees(n) { return "₹" + Number(n).toLocaleString("en-IN"); }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  /* ---------- glide: a short scroll the site starts itself (menu tabs and chips) ----------
+     Run frame by frame so it stops cleanly the moment anything else moves the page: another
+     tap, a re-drawn menu, or the visitor's own wheel, touch or keys. (The browser's own smooth
+     scroll can land in the wrong place when it is interrupted like that.) */
+  var glideRun = 0;
+  function stopGlide() { glideRun++; }
+  function glide(to) {
+    stopGlide();
+    to = Math.max(0, Math.min(Math.round(to), document.documentElement.scrollHeight - window.innerHeight));
+    var from = window.scrollY, dist = to - from;
+    if (reduce || Math.abs(dist) < 2) { window.scrollTo(0, to); return; }
+    var run = glideRun, dur = Math.min(900, 420 + Math.abs(dist) * 0.12), t0 = 0;
+    requestAnimationFrame(function step(t) {
+      if (run !== glideRun) return;
+      if (!t0) t0 = t;
+      var k = Math.min(1, (t - t0) / dur);
+      window.scrollTo(0, Math.round(from + dist * (1 - Math.pow(1 - k, 4))));
+      if (k < 1) requestAnimationFrame(step);
+    });
+  }
+  ["wheel", "touchstart", "pointerdown", "keydown"].forEach(function (ev) { window.addEventListener(ev, stopGlide, { passive: true }); });
+
   function observeReveal(root) {
     var els = $$("[data-reveal]", root);
     if (!("IntersectionObserver" in window) || reduce) { els.forEach(function (el) { el.classList.add("is-in"); }); return; }
@@ -85,16 +108,23 @@
 
   /* ---------- mobile nav ---------- */
   var burger = $("[data-burger]"), mnav = $("[data-mnav]");
+  var behind = $$(".skip-link, main, .site-footer, .dock"); // made inert while the menu covers them, so Tab stays inside the menu
   function setMenu(open) {
+    var was = document.body.classList.contains("menu-open");
     document.body.classList.toggle("menu-open", open);
     document.documentElement.style.overflow = open ? "hidden" : "";
     if (burger) { burger.setAttribute("aria-expanded", open ? "true" : "false"); burger.setAttribute("aria-label", open ? "Close menu" : "Open menu"); }
     if (mnav) mnav.setAttribute("aria-hidden", open ? "false" : "true");
+    behind.forEach(function (el) { el.inert = open; });
+    if (open && !was && mnav) { var first = $("a", mnav); if (first) first.focus({ preventScroll: true }); }
+    if (!open && was && burger && mnav && mnav.contains(document.activeElement)) burger.focus({ preventScroll: true });
   }
   if (burger) burger.addEventListener("click", function () { setMenu(!document.body.classList.contains("menu-open")); });
   window.addEventListener("resize", function () { if (window.innerWidth > 1080 && document.body.classList.contains("menu-open")) setMenu(false); }); // e.g. an iPad turned sideways
   if (mnav) $$("a", mnav).forEach(function (a) { a.addEventListener("click", function () { setMenu(false); }); });
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape") setMenu(false); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && document.body.classList.contains("menu-open")) { setMenu(false); if (burger) burger.focus({ preventScroll: true }); }
+  });
 
   /* ---------- reveal on scroll (once; starts just before the element enters the screen) ---------- */
   var revealIO = ("IntersectionObserver" in window) ? new IntersectionObserver(function (entries) {
@@ -113,32 +143,11 @@
     }).join(""); // shown as is (no fade): the section may already be on screen when this runs
   }
 
-  /* ---------- strips: auto-drift + mouse drag + touch swipe, loop ---------- */
+  /* ---------- photo strips: swipe (touch) or drag (mouse) sideways; they never move on their own ---------- */
   $$("[data-strip]").forEach(function (strip) {
-    var items = [].slice.call(strip.children);
-    if (items.length < 2) return;
-    items.forEach(function (it) { // duplicate once so the drift can loop
-      var c = it.cloneNode(true);
-      c.setAttribute("aria-hidden", "true");
-      $$("a, button", c).forEach(function (a) { a.tabIndex = -1; });
-      strip.appendChild(c);
-    });
-    var firstCopy = strip.children[items.length];
-    var loopW = function () { return firstCopy.offsetLeft - items[0].offsetLeft; }; // one full set of items
-    var pos = 0, paused = false, resumeAt = 0, inView = false, running = false, last = 0;
-    var speed = parseFloat(strip.getAttribute("data-speed") || "26"); // px per second
-
-    function hold(ms) { paused = true; resumeAt = performance.now() + (ms || 2000); }
-    function wrap() {
-      var w = loopW();
-      if (strip.scrollLeft >= w) strip.scrollLeft -= w;
-      else if (strip.scrollLeft <= 0 && w > 0) strip.scrollLeft += w;
-      pos = strip.scrollLeft;
-    }
     var dragging = false, sx = 0, sl = 0, moved = 0;
     strip.addEventListener("pointerdown", function (e) {
-      hold(2000);
-      if (e.pointerType !== "mouse") return; // touch uses native scrolling
+      if (e.pointerType !== "mouse" || e.button !== 0) return; // touch uses native scrolling
       dragging = true; moved = 0; sx = e.clientX; sl = strip.scrollLeft;
       strip.setPointerCapture(e.pointerId);
     });
@@ -147,42 +156,16 @@
       var dx = e.clientX - sx; moved = Math.max(moved, Math.abs(dx));
       if (moved > 4) strip.classList.add("is-dragging");
       strip.scrollLeft = sl - dx;
-      wrap(); sl = strip.scrollLeft + dx;
-      hold(2000);
     });
     var end = function (e) {
       if (!dragging) return;
       dragging = false;
       try { strip.releasePointerCapture(e.pointerId); } catch (_) {}
       setTimeout(function () { strip.classList.remove("is-dragging"); }, 0);
-      hold(2000);
     };
     strip.addEventListener("pointerup", end);
     strip.addEventListener("pointercancel", end);
     strip.addEventListener("click", function (e) { if (moved > 4) { e.preventDefault(); e.stopPropagation(); } }, true);
-    strip.addEventListener("touchstart", function () { hold(2500); }, { passive: true });
-    strip.addEventListener("touchmove", function () { hold(2500); }, { passive: true });
-    strip.addEventListener("wheel", function (e) { if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) hold(2000); }, { passive: true });
-    strip.addEventListener("scroll", function () { if (paused) wrap(); }, { passive: true });
-    strip.addEventListener("focusin", function () { hold(4000); });
-    function frame(t) {
-      if (!inView) { running = false; last = 0; return; } // stops off screen; restarts when seen
-      var dt = last ? Math.min(64, t - last) : 16; last = t;
-      if (paused && t > resumeAt && !dragging) { paused = false; pos = strip.scrollLeft; }
-      if (!paused) {
-        pos += speed * dt / 1000;
-        var w = loopW();
-        if (pos >= w) pos -= w;
-        strip.scrollLeft = pos;
-      }
-      requestAnimationFrame(frame);
-    }
-    if ("IntersectionObserver" in window && !reduce) {
-      new IntersectionObserver(function (en) {
-        inView = en[0].isIntersecting;
-        if (inView && !running) { running = true; pos = strip.scrollLeft; requestAnimationFrame(frame); }
-      }).observe(strip);
-    }
   });
 
   /* ---------- videos: play only while on screen ---------- */
@@ -207,12 +190,23 @@
   } else $$("video[data-poster]").forEach(function (v) { v.poster = v.dataset.poster; });
 
   /* ---------- menu page ---------- */
+  var jumped = false; // the menu handles its own #links
   var menuRoot = $("[data-menu]");
   if (menuRoot && window.WONGDHEN_MENU) {
     var MENU = window.WONGDHEN_MENU;
     var tabsEl = $("[data-menu-tabs]"), chipsEl = $("[data-menu-chips]"), dietEl = $("[data-menu-diet]");
     var current = MENU[0].id;
     var diet = ""; // Veg / Non-veg filter: "", "veg" or "nonveg"
+    // the open tab and filter are kept with this history entry, so a reload or Back returns to the same list
+    var saved = null;
+    try { saved = history.state && history.state.wdMenu; } catch (e) {}
+    if (saved) {
+      if (MENU.some(function (s) { return s.id === saved.tab; })) current = saved.tab;
+      if (saved.diet === "veg" || saved.diet === "nonveg") diet = saved.diet;
+    }
+    var remember = function (hash) {
+      try { history.replaceState(Object.assign({}, history.state, { wdMenu: { tab: current, diet: diet } }), "", hash === undefined ? location.href : "#" + hash); } catch (e) {}
+    };
     var DIET = { veg: { only: "Veg only", word: "veg", mark: "Vegetarian" }, nonveg: { only: "Non-veg only", word: "non-veg", mark: "Non-vegetarian" } };
     var optDiet = function (o) { // an option's kind from its name: "Chicken" → nonveg, "Mixed Veg" → veg, "8 pc" → ""
       if (/\b(non-veg|chicken|buff|pork|prawns?|lamb|fish|salmon|tuna|seafood|crab|duck|ham|bacon)\b/i.test(o)) return "nonveg";
@@ -272,13 +266,19 @@
         return '<div class="menu-panel" id="panel-' + sec.id + '" role="tabpanel" aria-labelledby="tab-' + sec.id + '"' + (sec.id === current ? "" : " hidden") + ">" +
           (diet ? filterNote(sec, !groups) : "") + groups + "</div>";
       }).join("");
+      $$(".menu-group__img img", menuRoot).forEach(function (img) { // photos fade in once loaded
+        var on = function () { img.classList.add("is-loaded"); };
+        if (img.complete) on(); else { img.addEventListener("load", on, { once: true }); img.addEventListener("error", on, { once: true }); }
+      });
     };
     renderMenu();
     menuRoot.classList.add("is-ready"); // releases the height reserved in CSS (keeps a reload mid-menu in place)
 
     // the bar's real height (tabs + chips), so sticky headings and jump links land below it
+    // (on a phone turned sideways the bar doesn't stick, so it takes no room: see styles.css)
     var bar = $(".menu-bar");
-    var setBarH = function () { if (bar) document.documentElement.style.setProperty("--menubar-h", bar.offsetHeight + "px"); };
+    var barRoom = function () { return bar && getComputedStyle(bar).position === "sticky" ? bar.offsetHeight : 0; };
+    var setBarH = function () { if (bar) document.documentElement.style.setProperty("--menubar-h", barRoom() + "px"); };
     if (bar && "ResizeObserver" in window) new ResizeObserver(setBarH).observe(bar);
     window.addEventListener("resize", setBarH);
     var renderChips = function () {
@@ -289,15 +289,15 @@
     };
     // Where the page sits when the menu starts right under the stuck bar. Content above the
     // menu never changes, so this can be measured before a tab swap or a filter re-draw.
+    var underBar = function () { return (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--header-h")) || 0) + barRoom(); };
     var menuStart = function () {
-      var headerH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--header-h")) || 0;
-      return Math.max(0, Math.round(menuRoot.getBoundingClientRect().top + window.scrollY - headerH - bar.offsetHeight));
+      return Math.max(0, Math.round(menuRoot.getBoundingClientRect().top + window.scrollY - underBar()));
     };
     // After swapping what the menu shows: if the visitor was already inside the menu, put the new
     // content's start right under the bar in the same frame (no smooth scroll, so nothing flashes past).
     var settle = function (target, wasInside, smoothFromAbove) {
-      if (wasInside) window.scrollTo(0, target);
-      else if (smoothFromAbove) window.scrollTo({ top: target, behavior: reduce ? "auto" : "smooth" });
+      if (wasInside) { stopGlide(); window.scrollTo(0, target); }
+      else if (smoothFromAbove) glide(target);
     };
     var selectTab = function (id, scroll) {
       var target = menuStart(), inside = window.scrollY > target + 1;
@@ -308,10 +308,11 @@
       if (sel) tabsEl.scrollTo({ left: Math.max(0, sel.offsetLeft - 16), behavior: scroll && !reduce ? "smooth" : "auto" });
       $$(".menu-panel", menuRoot).forEach(function (p) { p.hidden = p.id !== "panel-" + id; });
       renderChips();
+      remember();
       if (scroll) settle(target, inside, true);
     };
     tabsEl.innerHTML = MENU.map(function (s, i) {
-      return '<button class="tab" role="tab" id="tab-' + s.id + '" data-tab="' + s.id + '" aria-controls="panel-' + s.id + '" aria-selected="' + (i ? "false" : "true") + '"><span>' + esc(s.label) + "</span></button>";
+      return '<button class="tab" role="tab" id="tab-' + s.id + '" data-tab="' + s.id + '" aria-controls="panel-' + s.id + '" aria-selected="' + (s.id === current ? "true" : "false") + '"><span>' + esc(s.label) + "</span></button>";
     }).join("");
     $$(".tab", tabsEl).forEach(function (t) { t.addEventListener("click", function () { selectTab(t.getAttribute("data-tab"), true); }); });
     // the dark pill slides to the selected tab
@@ -329,15 +330,17 @@
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(moveThumb);
     renderChips();
     setBarH();
+    var chipsMoved = false; // the first placement (on load) jumps; later ones glide
     var gio = ("IntersectionObserver" in window) ? new IntersectionObserver(function (entries) {
       entries.forEach(function (e) {
         if (!e.isIntersecting) return;
         $$(".chip", chipsEl).forEach(function (c) {
           var on = c.getAttribute("href") === "#" + e.target.id;
           c.setAttribute("aria-current", on ? "true" : "false");
-          if (on) chipsEl.scrollTo({ left: c.offsetLeft - 24, behavior: reduce ? "auto" : "smooth" });
+          if (on) chipsEl.scrollTo({ left: c.offsetLeft - 24, behavior: reduce || !chipsMoved ? "auto" : "smooth" });
         });
       });
+      chipsMoved = true;
     }, { rootMargin: "-40% 0px -55% 0px" }) : null;
     var observeGroups = function () {
       if (!gio) return;
@@ -352,23 +355,35 @@
       $$("[data-diet]", dietEl).forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-diet") === d ? "true" : "false"); });
       var target = menuStart(), inside = window.scrollY > target + 1;
       renderMenu(); renderChips(); observeGroups();
+      remember();
       settle(target, inside, false); // was partway down the menu: the filtered list starts under the bar
     };
+    if (diet) $$("[data-diet]", dietEl).forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-diet") === diet ? "true" : "false"); });
+    // jump chips scroll within the open list without adding Back-button steps
+    chipsEl.addEventListener("click", function (e) {
+      var a = e.target.closest("a.chip"); if (!a) return;
+      var id = a.getAttribute("href").slice(1), g = document.getElementById(id);
+      if (!g) return;
+      e.preventDefault();
+      glide(g.getBoundingClientRect().top + window.scrollY - underBar());
+      remember(id);
+    });
     if (dietEl) $$("[data-diet]", dietEl).forEach(function (b) {
       b.addEventListener("click", function () { var d = b.getAttribute("data-diet"); setDiet(diet === d ? "" : d); });
     });
     menuRoot.addEventListener("click", function (e) { if (e.target.closest("[data-diet-clear]")) setDiet(""); });
-    // deep links: menu.html#drinks (a tab) or menu.html#pizza (a group)
-    var hash = location.hash.slice(1);
-    if (hash) {
+    // deep links: menu.html#drinks (a tab) or menu.html#pizza (a group); also when the hash changes later
+    var goToHash = function (hash) {
       var sec = MENU.filter(function (s) { return s.id === hash || s.groups.some(function (g) { return g.id === hash; }); })[0];
-      if (sec) { // jump straight away, before the first paint where possible
-        selectTab(sec.id, false);
-        setBarH();
-        if (sec.id === hash) window.scrollTo(0, menuStart());
-        else { var g = document.getElementById(hash); if (g) g.scrollIntoView({ behavior: "auto" }); }
-      }
-    }
+      if (!sec) return;
+      selectTab(sec.id, false);
+      setBarH();
+      if (sec.id === hash) window.scrollTo(0, menuStart());
+      else { var g = document.getElementById(hash); if (g) g.scrollIntoView({ behavior: "auto" }); }
+    };
+    // a reload / Back restores its own scroll position (the list is the same one); a fresh visit follows the hash
+    if (!saved && location.hash.length > 1) { goToHash(location.hash.slice(1)); jumped = true; }
+    window.addEventListener("hashchange", function () { goToHash(location.hash.slice(1)); });
   }
 
   /* ---------- booking form → WhatsApp ---------- */
@@ -405,15 +420,36 @@
       if (v) { var r = $('input[name="' + k + '"][value="' + v.replace(/"/g, "") + '"]', form); if (r) r.checked = true; }
     });
 
+    // a problem is shown right under the field it belongs to, and that field is brought into view
+    var fail = function (field, msg) {
+      var box = field.closest(".field"), p = $(".field__error", box);
+      if (!p) { p = document.createElement("p"); p.className = "field__error"; p.id = field.id + "-error"; p.setAttribute("role", "alert"); box.appendChild(p); }
+      p.textContent = msg;
+      field.setAttribute("aria-invalid", "true");
+      field.setAttribute("aria-describedby", p.id);
+      field.focus({ preventScroll: true });
+      field.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+    };
+    var clearError = function (field) {
+      var p = $(".field__error", field.closest(".field"));
+      if (p) p.textContent = "";
+      field.removeAttribute("aria-invalid");
+      field.removeAttribute("aria-describedby");
+    };
+    $$("#b-name, #b-date, #b-time", form).forEach(function (f) {
+      f.addEventListener(f.tagName === "SELECT" || f.type === "date" ? "change" : "input", function () { clearError(f); });
+    });
+
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       err.textContent = "";
-      var name = $("#b-name", form).value.trim();
+      var nameIn = $("#b-name", form), name = nameIn.value.trim();
       var guests = $("#b-guests", form).value;
-      if (!name) { err.textContent = "Please add your name."; $("#b-name", form).focus(); return; }
-      if (!dateIn.value) { err.textContent = "Please pick a date."; dateIn.focus(); return; }
-      if (dateIn.value < now.iso) { err.textContent = "That date has passed. Please pick today or a later date."; dateIn.focus(); return; }
-      if (!timeSel.value) { err.textContent = "Please pick a time."; timeSel.focus(); return; }
+      [nameIn, dateIn, timeSel].forEach(clearError);
+      if (!name) { fail(nameIn, "Please add your name."); return; }
+      if (!dateIn.value) { fail(dateIn, "Please pick a date."); return; }
+      if (dateIn.value < now.iso) { fail(dateIn, "That date has passed. Please pick today or a later date."); return; }
+      if (!timeSel.value) { fail(timeSel, "Please pick a time."); return; }
       var seat = ($('input[name="seating"]:checked', form) || {}).value || "No preference";
       var occasion = ($('input[name="occasion"]:checked', form) || {}).value || "";
       var note = $("#b-note", form).value.trim();
@@ -432,7 +468,17 @@
       if (note) lines.push("Note: " + note);
       var url = waLink(lines.join("\n"));
       form.setAttribute("data-last-wa", url); // for QA
-      window.open(url, "_blank", "noopener");
+      // a new tab where allowed; if a pop-up blocker stops it, open WhatsApp in this tab instead
+      var tab = window.open(url, "_blank");
+      if (tab) tab.opener = null; else location.href = url;
     });
+  }
+  /* ---------- links to a spot down the page: jump, then show (see .wd-jump in styles.css) ---------- */
+  if (document.documentElement.classList.contains("wd-jump")) {
+    if (!jumped && location.hash.length > 1) {
+      var spot = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+      if (spot) spot.scrollIntoView({ behavior: "auto" });
+    }
+    requestAnimationFrame(function () { document.documentElement.classList.remove("wd-jump"); });
   }
 })();

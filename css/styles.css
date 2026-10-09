@@ -47,7 +47,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; scroll-padding-top: var(--header-h); background: var(--night); } /* dark behind everything: no white flash between pages */
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: var(--header-h); scroll-padding-bottom: 90px; background: var(--night); } /* dark behind everything: no white flash between pages */
 body {
   margin: 0;
   background: var(--paper);
@@ -78,8 +78,8 @@ ul { margin: 0; padding: 0; list-style: none; }
 p, blockquote { text-wrap: pretty; }
 .section { padding: clamp(80px, 12vw, 168px) 0; }
 .section--tight { padding: clamp(56px, 8vw, 104px) 0; }
-.section--paper2 { background: var(--paper-2); }
-.section--night { background: var(--night); color: var(--cream); }
+.section--paper2 { background: var(--paper-2); --curtain: var(--paper-2); }
+.section--night { background: var(--night); color: var(--cream); --curtain: var(--night); }
 .section--night .muted, .section--night p { color: rgba(244, 235, 223, .74); }
 
 /* ---------- type ---------- */
@@ -139,9 +139,12 @@ p, blockquote { text-wrap: pretty; }
   transition: background-size .45s var(--ease);
   padding-bottom: 3px;
 }
-.link:hover { background-size: 100% 1px; }
 .link svg { width: 18px; height: 18px; transition: transform .35s var(--ease); }
-.link:hover svg { transform: translateX(4px); }
+@media (hover: hover) {
+  .link:hover { background-size: 100% 1px; }
+  .link:hover svg { transform: translateX(4px); }
+}
+.link:focus-visible { background-size: 100% 1px; }
 
 /* ---------- header ---------- */
 /* The header is always the same solid dark bar with cream text: nothing about it
@@ -162,7 +165,7 @@ p, blockquote { text-wrap: pretty; }
 .logo circle { fill: var(--logo); }
 .logo use { fill: var(--logo-ink); }
 .logo__ring, .logo__w { transform-origin: 150px 150px; }
-.brand:hover .logo__ring { animation: ring-spin 2.4s var(--ease-io); }
+@media (hover: hover) { .brand:hover .logo__ring { animation: ring-spin 2.4s var(--ease-io); } } /* uses rotate, so it adds to the scroll turn without a jump */
 @keyframes ring-spin { to { rotate: 360deg; } }
 .brand__sub { font: 600 9.5px/1 var(--sans); letter-spacing: .34em; text-transform: uppercase; margin-top: 6px; opacity: .8; }
 
@@ -184,11 +187,11 @@ p, blockquote { text-wrap: pretty; }
 .mnav {
   position: fixed; inset: 0; z-index: 110;
   background: var(--night); color: var(--cream);
-  padding: calc(var(--header-h) + 28px) var(--gutter) 32px;
+  padding: calc(var(--header-h) + 28px) max(var(--gutter), env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(var(--gutter), env(safe-area-inset-left));
   display: flex; flex-direction: column; justify-content: space-between; gap: 28px; overflow-y: auto; /* reachable in phone landscape */
-  opacity: 0; visibility: hidden; transition: opacity .35s ease, visibility .35s;
+  opacity: 0; visibility: hidden; transition: opacity .35s ease, visibility 0s linear .35s;
 }
-.menu-open .mnav { opacity: 1; visibility: visible; }
+.menu-open .mnav { opacity: 1; visibility: visible; transition: opacity .35s ease, visibility 0s; } /* visible at once, so its first link can take focus */
 .menu-open .site-header { z-index: 130; } /* keep the close button above the open menu */
 .mnav__links a { display: block; font: 400 clamp(2.4rem, 11vw, 3.4rem)/1.12 var(--serif); padding: 4px 0; }
 .mnav__links a[aria-current="page"] { font-style: italic; color: var(--brass); }
@@ -233,7 +236,7 @@ p, blockquote { text-wrap: pretty; }
 .day { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(14px, 2vw, 28px); }
 .day__card { position: relative; display: block; border-radius: var(--radius); overflow: hidden; aspect-ratio: 4 / 5.4; color: var(--cream); background: var(--night); }
 .day__card img { width: 100%; height: 100%; object-fit: cover; transition: transform 1.2s var(--ease); }
-.day__card:hover img { transform: scale(1.04); }
+@media (hover: hover) { .day__card:hover img { transform: scale(1.04); } }
 .day__card::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(14, 10, 7, 0) 22%, rgba(14, 10, 7, .62) 50%, rgba(14, 10, 7, .93)); }
 .day__card:focus-visible { outline: 2px solid var(--brass); outline-offset: -6px; }
 .day__text { position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; padding: clamp(22px, 2.6vw, 34px); }
@@ -323,6 +326,7 @@ p, blockquote { text-wrap: pretty; }
 .section--night .hours__row[data-today="true"] { color: var(--brass); }
 .map { border-radius: var(--radius); overflow: hidden; aspect-ratio: 4 / 3.4; background: var(--paper-3); }
 .map iframe { width: 100%; height: 100%; border: 0; display: block; filter: saturate(.85); }
+.map iframe:focus-visible { outline: 2px solid var(--copper); outline-offset: -4px; }
 
 /* ---------- menu page ---------- */
 .menu-note { display: grid; grid-template-columns: 1fr; gap: 16px; justify-items: start; background: var(--paper-2); border-radius: var(--radius); padding: 22px 26px; font-size: 15px; color: var(--ink-soft); }
@@ -336,10 +340,10 @@ p, blockquote { text-wrap: pretty; }
 .tab span { position: relative; z-index: 2; }
 /* a pill that slides to the selected tab (added by main.js) */
 .tabs__thumb.no-anim { transition: none; }
-.tabs__thumb { position: absolute; left: 0; top: 4px; z-index: 1; height: 44px; border-radius: 999px; background: var(--ink); pointer-events: none; transition: transform .55s var(--ease-expo), width .55s var(--ease-expo); }
-.has-thumb .tab[aria-selected="true"] { background: var(--paper-2); transition: color .4s ease; }
+.tabs__thumb { position: absolute; left: 0; top: 4px; z-index: 1; height: 44px; border-radius: 999px; background: var(--ink); pointer-events: none; transition: transform .42s var(--ease-expo), width .42s var(--ease-expo); }
+.has-thumb .tab[aria-selected="true"] { background: var(--paper-2); transition: color .25s ease .14s; }
 .menu-bar__row { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
-.chips { flex: 1 1 auto; min-width: 0; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.chips { flex: 1 1 auto; min-width: 0; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 3px; margin: -3px; } /* room for focus rings */
 .chip { flex: none; padding: 8px 14px; border-radius: 999px; font: 500 14px/1 var(--sans); color: var(--ink-soft); }
 .chip[aria-current="true"] { background: var(--paper-3); color: var(--ink); }
 .diet { flex: none; display: flex; gap: 6px; }
@@ -361,7 +365,9 @@ p, blockquote { text-wrap: pretty; }
 }
 .menu-group__sticky { position: sticky; top: calc(var(--header-h) + var(--menubar-h, 120px) + 24px); }
 .menu-group__sticky .note { color: var(--ink-soft); font-size: 15px; margin-top: 14px; max-width: 34ch; }
-.menu-group__img { margin-top: 26px; border-radius: var(--radius); overflow: hidden; aspect-ratio: 4 / 4.6; max-height: calc(100vh - var(--header-h) - var(--menubar-h, 120px) - 300px); background: var(--paper-3); } /* the stuck column fits on short screens */
+.menu-group__img { margin-top: 26px; border-radius: var(--radius); overflow: hidden; aspect-ratio: 4 / 4.6; max-height: max(220px, calc(100vh - var(--header-h) - var(--menubar-h, 120px) - 300px)); background: var(--paper-3); }
+.js .menu-group__img img { opacity: 0; transition: opacity .6s ease; }
+.js .menu-group__img img.is-loaded { opacity: 1; } /* the stuck column fits on short screens */
 .menu-group__img img { width: 100%; height: 100%; object-fit: cover; }
 .menu-sub + .menu-sub { margin-top: 44px; }
 .menu-sub__label { font: 600 12px/1.4 var(--sans); letter-spacing: .2em; text-transform: uppercase; color: var(--copper); margin-bottom: 10px; }
@@ -474,6 +480,7 @@ fieldset.field { border: 0; margin: 0; padding: 0; min-width: 0; }
 /* ---------- reveal ---------- */
 .js [data-reveal] { opacity: 0; transform: translateY(14px); transition: opacity .7s var(--ease) var(--d, 0s), transform .8s var(--ease) var(--d, 0s); }
 .js [data-reveal].is-in { opacity: 1; transform: none; }
+.js:not(.wd-main) [data-reveal] { animation: wd-failsafe 0s 2.5s forwards; } /* if main.js never runs, fading content still shows */
 
 /* ==========================================================================
    Motion (js/motion.js). Every hidden starting state lives inside
@@ -525,7 +532,7 @@ fieldset.field { border: 0; margin: 0; padding: 0; min-width: 0; }
 @keyframes ld-line { from { transform: scaleX(0); } }
 /* exit: the seal floats up and fades, then the copper and night curtains lift with a curved edge */
 .loader--out .loader__stage { animation: ld-stage-out .8s var(--ease-io) forwards; }
-.loader--out .loader__foot { animation: ld-out .45s ease forwards; }
+.loader--out .loader__foot, .loader--out .loader__bar { animation: ld-out .45s ease forwards; }
 .loader--out .loader__panel { animation: ld-lift 1.2s var(--ease-io) .35s forwards; }
 .loader--out .loader__back { animation: ld-lift 1.2s var(--ease-io) .5s forwards; }
 @keyframes ld-stage-out { to { opacity: 0; transform: translateY(-46px) scale(.94); } }
@@ -538,7 +545,7 @@ fieldset.field { border: 0; margin: 0; padding: 0; min-width: 0; }
 
 /* ---------- reveals: each plays once as it comes into view, then the page stands still ----------
    Nothing below follows the scroll position. */
-[data-media] { overflow: hidden; } /* the photo's settle-in zoom stays inside its frame */
+[data-media] { position: relative; overflow: hidden; } /* the photo's settle-in zoom stays inside its frame */
 .w { display: inline-block; white-space: nowrap; } /* split headings (motion.js): plain inline-block words, no masks */
 .w__i { display: inline-block; }
 @media (prefers-reduced-motion: no-preference) {
@@ -548,17 +555,28 @@ fieldset.field { border: 0; margin: 0; padding: 0; min-width: 0; }
   .is-split.is-in .w__i { opacity: 1; transform: none; }
 
   /* photos: a curtain opens and the photo settles to its natural size */
-  .js [data-media]:not(.is-in) { clip-path: inset(100% 0 0 0 round var(--radius)); }
-  .js [data-media] { transition: clip-path 1.2s var(--ease-expo) var(--d, 0s); }
-  .js [data-media].is-in { clip-path: inset(0 0 0 0 round var(--radius)); }
+  /* photos: a cover in the section's own colour lifts off the photo (transform only). The photo's frame itself is
+     never clipped, so the browser always sees it and the reveal fires from any direction, even scrolling up. */
+  .js [data-media]::before {
+    content: ""; position: absolute; inset: -1px; z-index: 3; pointer-events: none;
+    background: var(--curtain, var(--paper)); transform-origin: 50% 0;
+    transition: transform 1.2s var(--ease-expo) var(--d, 0s);
+  }
+  .js [data-media].is-in::before { transform: scaleY(0); }
   .js [data-media] img { scale: 1.12; transition: scale 1.6s var(--ease-expo) var(--d, 0s), transform 1.2s var(--ease); }
   .js [data-media].is-in img { scale: 1; }
   .js .split__media--duo[data-media] img { scale: 1; } /* two photos in one frame: curtain only, so they never overlap */
 
   /* fail-safe if motion.js doesn't run */
-  .js:not(.motion) [data-split], .js:not(.motion) [data-media], .js:not(.motion) [data-media] img { animation: wd-failsafe 0s 2.5s forwards; }
+  .js:not(.motion) [data-split], .js:not(.motion) [data-media] img { animation: wd-failsafe 0s 2.5s forwards; }
+  .js:not(.motion) [data-media]::before { animation: wd-failsafe-cover 0s 2.5s forwards; }
 }
-@keyframes wd-failsafe { to { opacity: 1; clip-path: none; scale: 1; } }
+@keyframes wd-failsafe { to { opacity: 1; scale: 1; transform: none; } }
+/* a link to a spot further down the page: hold the first paint until the page has jumped there (main.js),
+   so the top of the page never flashes first. Fail-safe: shown after 1.2 s regardless. */
+.wd-jump body { visibility: hidden; animation: wd-show 0s 1.2s forwards; }
+@keyframes wd-show { to { visibility: visible; } }
+@keyframes wd-failsafe-cover { to { transform: scaleY(0); } }
 
 /* ---------- scroll cue (home hero) ---------- */
 .scroll-cue { position: absolute; left: 50%; bottom: clamp(32px, 6vh, 64px); translate: -50% 0; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 14px; font: 600 10.5px/1 var(--sans); letter-spacing: .3em; text-transform: uppercase; color: rgba(244, 235, 223, .7); writing-mode: vertical-rl; }
@@ -609,6 +627,7 @@ fieldset.field { border: 0; margin: 0; padding: 0; min-width: 0; }
   .quotes { grid-template-columns: 1fr; }
   .menu-group__sticky { position: static; }
   .menu-group__img { aspect-ratio: 16 / 9; }
+  .chips, .tabs { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
   .scroll-cue { display: none; }
   .press { grid-template-columns: 1fr; }
   .chapter { grid-template-columns: 1fr; gap: 10px; }
@@ -637,7 +656,6 @@ fieldset.field { border: 0; margin: 0; padding: 0; min-width: 0; }
   .dock a { flex: 1; justify-content: center; }
   .site-footer { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   .split__media--duo { grid-template-columns: 1fr 1fr; }
-  .chips, .tabs { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
   /* a slimmer menu bar on phones: more of the menu on screen */
   .menu-bar { padding: 10px 0 8px; }
   .tab { min-height: 40px; padding: 0 16px; font-size: 14px; }
@@ -645,6 +663,12 @@ fieldset.field { border: 0; margin: 0; padding: 0; min-width: 0; }
   .menu-bar__row { margin-top: 6px; gap: 8px; }
   .diet { gap: 4px; }
   .diet button { min-height: 36px; padding: 0 11px; gap: 6px; font-size: 13px; }
+}
+/* phones turned sideways: too short for a stuck menu bar, so it scrolls away with the page */
+@media (max-height: 520px) and (orientation: landscape) {
+  .menu-bar { position: relative; top: auto; }
+  .menu-bar::after { display: none; }
+  .menu-group__sticky { position: static; }
 }
 /* wide screens: the brass WONGDHEN CAFE sign on the left stays clear, the text sits in the right half */
 @media (min-width: 1081px) and (min-aspect-ratio: 1/1) {
@@ -661,8 +685,12 @@ fieldset.field { border: 0; margin: 0; padding: 0; min-width: 0; }
 
 /* tall, narrow screens (phones): the whole brass sign across the top, fading into the night where the text sits */
 @media (max-aspect-ratio: 7/10) {
-  .hero__media { bottom: auto; height: calc(100vw * 1156 / 900); max-height: calc(100% - var(--header-h)); }
-  .hero__media img { object-position: 50% 50%; }
+  /* stacked, not overlaid: the photo is a block of its own and the text follows it, overlapping only the
+     photo's faded bottom edge, so the headline can never land on the sign whatever the screen height */
+  .hero { display: block; min-height: 0; padding-top: var(--header-h); }
+  .hero__media { position: relative; inset: auto; width: 100%; height: auto; aspect-ratio: 900 / 1156; max-height: 62svh; } /* the width is set, so the height cap crops instead of narrowing it */
+  .hero__media img { object-position: 50% 0%; }
+  .hero__inner { margin-top: -64px; padding-top: 0; }
   .hero__media::after { background: linear-gradient(180deg, rgba(14, 10, 7, .5) 0%, rgba(14, 10, 7, .08) 20%, rgba(14, 10, 7, .1) 48%, rgba(21, 17, 14, .82) 80%, var(--night) 100%); }
 }
 @media (prefers-reduced-motion: reduce) {
